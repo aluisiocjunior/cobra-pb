@@ -6,8 +6,7 @@ import{useAuth}from '../context/AuthContext'
 import type{Species,SightingPublic,Stats}from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
 
-const HERO='https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Bothrops_erythromelas2.jpg/800px-Bothrops_erythromelas2.jpg'
-const HERO_FALLBACK="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23d9cdb0'/%3E%3Cellipse cx='260' cy='150' rx='150' ry='80' fill='%23a08a5f'/%3E%3Ccircle cx='150' cy='130' r='10' fill='%232a2118'/%3E%3C/svg%3E"
+const HERO='/images/hero-snake.png'
 
 export default function Home(){
   const{isAuthenticated,loading:authLoading}=useAuth()
@@ -45,7 +44,7 @@ export default function Home(){
         </svg>
       </div>
       <div className="hero-photo-wrap">
-        <img src={HERO} alt="Jararaca-do-nordeste" className="hero-photo" loading="eager" onError={(e)=>{(e.target as HTMLImageElement).onerror=null;(e.target as HTMLImageElement).src=HERO_FALLBACK}}/>
+        <img src={HERO} alt="Jararaca-do-nordeste" className="hero-photo" loading="eager"/>
       </div>
       <div className="hero-body">
         <h2>Saiba identificar cobras peçonhentas e opções de primeiros socorros</h2>

@@ -372,16 +372,14 @@ textarea.input { resize: vertical; min-height: 5rem }
 .hero-wave { display: block; width: 100%; height: 56px; margin-bottom: -1px }
 .hero-wave path { fill: var(--fundo) }
 .hero-photo-wrap {
-  margin-top: -100px;
+  margin-top: -28px;
   padding: 0;
   display: flex; justify-content: center;
 }
 .hero-photo {
-  width: 90%;
-  max-width: 380px;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  object-position: center 30%;
+  width: 92%;
+  max-width: 420px;
+  height: auto;
   display: block;
   border-radius: 0;
   background: transparent;
