@@ -1,5 +1,5 @@
 import{Suspense,lazy}from 'react'
-import{Routes,Route,Link}from 'react-router-dom'
+import{Routes,Route,Link,useLocation}from 'react-router-dom'
 import{ShieldAlert}from 'lucide-react'
 import{useAuth}from './context/AuthContext'
 import NavBar from './components/NavBar'
@@ -18,20 +18,24 @@ const MapPage=lazy(()=>import('./pages/MapPage'))
 const RecordDetail=lazy(()=>import('./pages/RecordDetail'))
 const Moderation=lazy(()=>import('./pages/Moderation'))
 export default function App(){
-  const{isAuthenticated}=useAuth()
+  const{isAuthenticated,loading}=useAuth()
+  const location=useLocation()
+  const isLandingScreen=location.pathname==='/'&&!isAuthenticated&&!loading
   return(<div className="app-shell">
-    <header className="app-header">
-      <Link to="/" className="brand">
-        <span className="brand-mark">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2C5 2 2 4 2 8s3 6 6 6 6-3 6-6-2-6-6-6z" stroke="white" strokeWidth="1.5" fill="none"/><path d="M5 8c0-1.7 1.3-3 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        </span>
-        É uma cobra venenosa?
-      </Link>
-      <div style={{flex:1}}/>
-      <Link to="/o-que-fazer" title="O que fazer?" style={{color:'var(--cinza-medio)'}}><ShieldAlert size={20}/></Link>
-      {!isAuthenticated&&<Link to="/entrar" style={{color:'var(--vermelho)',fontWeight:700,fontSize:'0.85rem',marginLeft:'0.8rem',textDecoration:'none'}}>Entrar</Link>}
-    </header>
-    <main className="app-main"><Suspense fallback={<p className="center-note">Carregando…</p>}><Routes>
+    {!isLandingScreen&&(
+      <header className="app-header">
+        <Link to="/" className="brand">
+          <span className="brand-mark">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2C5 2 2 4 2 8s3 6 6 6 6-3 6-6-2-6-6-6z" stroke="white" strokeWidth="1.5" fill="none"/><path d="M5 8c0-1.7 1.3-3 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </span>
+          É uma cobra venenosa?
+        </Link>
+        <div style={{flex:1}}/>
+        <Link to="/o-que-fazer" title="O que fazer?" style={{color:'var(--cinza-medio)'}}><ShieldAlert size={20}/></Link>
+        {!isAuthenticated&&<Link to="/entrar" style={{color:'var(--vermelho)',fontWeight:700,fontSize:'0.85rem',marginLeft:'0.8rem',textDecoration:'none'}}>Entrar</Link>}
+      </header>
+    )}
+    <main className="app-main" style={isLandingScreen?{padding:0,maxWidth:'none'}:undefined}><Suspense fallback={<p className="center-note">Carregando…</p>}><Routes>
       <Route path="/" element={<Home/>}/>
       <Route path="/explorar" element={<Explore/>}/>
       <Route path="/explorar/especie/:id" element={<SpeciesDetail/>}/>
@@ -48,6 +52,6 @@ export default function App(){
       <Route path="/moderacao" element={<ProtectedRoute><Moderation/></ProtectedRoute>}/>
       <Route path="*" element={<p className="center-note">Página não encontrada.</p>}/>
     </Routes></Suspense></main>
-    <NavBar/>
+    {!isLandingScreen&&<NavBar/>}
   </div>)
 }

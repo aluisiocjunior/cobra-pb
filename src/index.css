@@ -361,12 +361,13 @@ textarea.input { resize: vertical; min-height: 5rem }
   display: flex; flex-direction: column; justify-content: flex-end;
 }
 .hero-title {
-  font-family: var(--font-display);
-  color: var(--branco);
-  font-size: 2.6rem;
+  font-family: var(--font-body);
+  color: #1a1006;
+  font-size: 2.5rem;
   font-weight: 800;
-  line-height: 1.1;
-  margin: 0 0 2.8rem;
+  line-height: 1.15;
+  margin: 0 0 2.6rem;
+  letter-spacing: -0.01em;
 }
 .hero-wave { display: block; width: 100%; height: 56px; margin-bottom: -1px }
 .hero-wave path { fill: var(--fundo) }
@@ -387,13 +388,13 @@ textarea.input { resize: vertical; min-height: 5rem }
 }
 .hero-body { padding: 0.5rem 1.4rem 2rem; flex: 1 }
 .hero-body h2 {
-  font-size: 1.55rem;
+  font-family: var(--font-body);
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--preto);
-  margin-bottom: 0.4rem;
-  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
 }
-.hero-body h2 strong { color: var(--preto) }
 .hero-body p {
   font-size: 1rem;
   color: var(--cinza-medio);
