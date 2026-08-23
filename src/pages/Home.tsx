@@ -8,6 +8,17 @@ import SpeciesStamp from '../components/SpeciesStamp'
 
 const HERO='/images/hero-snake.png'
 
+function SnakeFangIcon(){
+  return(
+    <svg width="22" height="20" viewBox="0 0 100 90" fill="none" aria-hidden="true">
+      <path d="M10,34 C8,18 26,6 46,7 C66,8 80,20 78,34 C76,44 66,49 56,46 C54,45.5 52.5,46.5 52.5,48.5 L54,64 C54.2,67.5 50.5,68.8 48.7,66 L41,52 C40,50.3 38,49.6 36,50.4 C22,55.5 12,48 10,34 Z" fill="#E5000F"/>
+      <path d="M35,56 L30,80 C29.3,83.2 33,84.8 34.7,82 L43,59 Z" fill="#E5000F"/>
+      <path d="M48,58 L47.5,82 C47.6,85.3 51.3,85.6 52.2,82.4 L57,58.5 Z" fill="#E5000F"/>
+      <circle cx="32" cy="27" r="3.6" fill="#0d0d0d"/>
+    </svg>
+  )
+}
+
 export default function Home(){
   const{isAuthenticated,loading:authLoading}=useAuth()
   const[species,setSpecies]=useState<Species[]>([])
@@ -47,9 +58,9 @@ export default function Home(){
         <img src={HERO} alt="Jararaca-do-nordeste" className="hero-photo" loading="eager"/>
       </div>
       <div className="hero-body">
-        <h2>Saiba identificar cobras peçonhentas e opções de primeiros socorros</h2>
+        <h2><span className="hero-outline-text">Saiba identificar cobras peçonhentas</span> e opções de primeiros socorros</h2>
         <p>em caso de acidentes. Tire uma foto para descobrir se a cobra é venenosa ou não.</p>
-        <Link to="/entrar" className="hero-cta">Entrar</Link>
+        <Link to="/entrar" className="hero-cta">Entrar <SnakeFangIcon/></Link>
         <p className="hero-signup">Não tem conta? <Link to="/cadastrar">Cadastre-se gratuitamente</Link></p>
         <Link to="/o-que-fazer" className="hero-secondary-link">
           <ShieldAlert size={14}/> O que fazer ao ver uma cobra?
