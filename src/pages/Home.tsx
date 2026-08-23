@@ -6,7 +6,7 @@ import{useAuth}from '../context/AuthContext'
 import type{Species,SightingPublic,Stats}from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
 
-const HERO='/images/hero-snake.png'
+const HERO_COVER='/images/hero-cover.png'
 
 export default function Home(){
   const{isAuthenticated,loading:authLoading}=useAuth()
@@ -37,19 +37,11 @@ export default function Home(){
   /* ── LANDING (visitante não autenticado) ── */
   if(!isAuthenticated)return(
     <div className="hero-landing">
-      <div className="hero-panel">
-        <h1 className="hero-title">É uma cobra<br/>venenosa?</h1>
-        <svg className="hero-wave" viewBox="0 0 500 56" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M0,28 C80,56 160,0 250,20 C340,40 420,4 500,24 L500,56 L0,56 Z"/>
-        </svg>
+      <div className="hero-cover-wrap">
+        <img src={HERO_COVER} alt="É uma cobra venenosa? Saiba identificar cobras peçonhentas e opções de primeiros socorros." className="hero-cover-img" loading="eager"/>
+        <Link to="/entrar" className="hero-cover-cta" aria-label="Entrar"/>
       </div>
-      <div className="hero-photo-wrap">
-        <img src={HERO} alt="Jararaca-do-nordeste" className="hero-photo" loading="eager"/>
-      </div>
-      <div className="hero-body">
-        <h2>Saiba identificar cobras peçonhentas e opções de primeiros socorros</h2>
-        <p>em caso de acidentes. Tire uma foto para descobrir se a cobra é venenosa ou não.</p>
-        <Link to="/entrar" className="hero-cta">Entrar</Link>
+      <div className="hero-below">
         <p className="hero-signup">Não tem conta? <Link to="/cadastrar">Cadastre-se gratuitamente</Link></p>
         <Link to="/o-que-fazer" className="hero-secondary-link">
           <ShieldAlert size={14}/> O que fazer ao ver uma cobra?
