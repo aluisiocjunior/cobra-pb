@@ -1,9 +1,10 @@
 import{useEffect,useState}from 'react'
 import{useSearchParams,Link}from 'react-router-dom'
-import{LogOut,Trash2,ShieldCheck,Pencil,Eye}from 'lucide-react'
+import{LogOut,Trash2,ShieldCheck,Pencil,Eye,Bell,BellOff}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import{STATUS_LABELS,type SightingStatus}from '../lib/types'
+import{getPushStatus,subscribeToPush,unsubscribeFromPush,type PushStatus}from '../lib/push'
 const ED:SightingStatus[]=['aguardando_revisao','correcao_solicitada']
 const SC:Record<SightingStatus,string>={aguardando_revisao:'var(--amarelo-bg)',em_revisao:'var(--amarelo-bg)',correcao_solicitada:'var(--vermelho-bg)',revisao_especialista:'var(--amarelo-bg)',aprovado:'var(--verde-seguro-bg)',rejeitado:'var(--vermelho-bg)'}
 const ST:Record<SightingStatus,string>={aguardando_revisao:'var(--amarelo-alerta)',em_revisao:'var(--amarelo-alerta)',correcao_solicitada:'var(--vermelho)',revisao_especialista:'var(--amarelo-alerta)',aprovado:'var(--verde-seguro)',rejeitado:'var(--vermelho)'}
@@ -13,6 +14,14 @@ export default function Profile(){
   const[params,setParams]=useSearchParams();const tab=params.get('tab')==='meus-registros'?'meus-registros':'perfil'
   const[phone,setPhone]=useState('');const[city,setCity]=useState('');const[state,setState]=useState('PB');const[notifyEnabled,setNotifyEnabled]=useState(true);const[phonePublic,setPhonePublic]=useState(false);const[saving,setSaving]=useState(false);const[saved,setSaved]=useState(false)
   const[sightings,setSightings]=useState<MS[]>([]);const[ls,setLs]=useState(true)
+  const[pushStatus,setPushStatus]=useState<PushStatus>('not-subscribed');const[pushBusy,setPushBusy]=useState(false);const[pushError,setPushError]=useState<string|null>(null)
+  useEffect(()=>{getPushStatus().then(setPushStatus)},[])
+  async function togglePush(){
+    if(!session)return;setPushBusy(true);setPushError(null)
+    if(pushStatus==='subscribed'){await unsubscribeFromPush();setPushStatus('not-subscribed')}
+    else{const r=await subscribeToPush(session.user.id);if(r.ok)setPushStatus('subscribed');else setPushError(r.error??'Não foi possível ativar as notificações.')}
+    setPushBusy(false)
+  }
   useEffect(()=>{if(profile){setPhone(profile.phone??'');setCity(profile.city??'');setState(profile.state??'PB');setNotifyEnabled(profile.notify_enabled);setPhonePublic(profile.phone_public)}},[profile])
   useEffect(()=>{
     if(tab!=='meus-registros'||!session)return;setLs(true)
@@ -42,6 +51,14 @@ export default function Profile(){
             <div className="field"><label>Estado</label><input className="input" value={state} onChange={(e)=>setState(e.target.value)} maxLength={2}/></div>
           </div>
           <div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={notifyEnabled} onChange={(e)=>setNotifyEnabled(e.target.checked)}/>Receber notificações</label></div>
+          <div className="field">
+            <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={togglePush} disabled={pushBusy||pushStatus==='unsupported'}>
+              {pushStatus==='subscribed'?<><BellOff size={14}/> Desativar notificações push</>:<><Bell size={14}/> Ativar notificações push neste dispositivo</>}
+            </button>
+            {pushStatus==='unsupported'&&<p className="field hint">Seu navegador não suporta notificações push.</p>}
+            {pushStatus==='denied'&&<p className="field hint">Notificações bloqueadas nas configurações do navegador.</p>}
+            {pushError&&<p className="error-text">{pushError}</p>}
+          </div>
           <div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={phonePublic} onChange={(e)=>setPhonePublic(e.target.checked)}/>Permitir que outros vejam meu telefone</label></div>
           {saved&&<p style={{color:'var(--verde-seguro)',fontWeight:600,fontSize:'0.88rem'}}>Perfil atualizado.</p>}
           <button className="btn btn-primary" type="submit" disabled={saving} style={{borderRadius:'999px'}}>{saving?'Salvando…':'Salvar alterações'}</button>
