@@ -10,7 +10,7 @@ const SC:Record<SightingStatus,string>={aguardando_revisao:'var(--amarelo-bg)',e
 const ST:Record<SightingStatus,string>={aguardando_revisao:'var(--amarelo-alerta)',em_revisao:'var(--amarelo-alerta)',correcao_solicitada:'var(--vermelho)',revisao_especialista:'var(--amarelo-alerta)',aprovado:'var(--verde-seguro)',rejeitado:'var(--vermelho)'}
 interface MS{id:string;status:SightingStatus;municipio:string|null;observation_date:string|null;created_at:string;suggested:{common_name:string}|null;confirmed:{common_name:string}|null;photo?:string|null}
 export default function Profile(){
-  const{profile,session,signOut,refreshProfile,isModeratorOrAdmin}=useAuth()
+  const{profile,session,signOut,refreshProfile,isModeratorOrAdmin,isAdmin}=useAuth()
   const[params,setParams]=useSearchParams();const tab=params.get('tab')==='meus-registros'?'meus-registros':'perfil'
   const[phone,setPhone]=useState('');const[city,setCity]=useState('');const[state,setState]=useState('PB');const[notifyEnabled,setNotifyEnabled]=useState(true);const[phonePublic,setPhonePublic]=useState(false);const[saving,setSaving]=useState(false);const[saved,setSaved]=useState(false)
   const[sightings,setSightings]=useState<MS[]>([]);const[ls,setLs]=useState(true)
@@ -42,7 +42,7 @@ export default function Profile(){
         <button className={tab==='perfil'?'active':''} onClick={()=>setParams({tab:'perfil'})}>Meus dados</button>
         <button className={tab==='meus-registros'?'active':''} onClick={()=>setParams({tab:'meus-registros'})}>Registros</button>
       </div>
-      {isModeratorOrAdmin&&(<div style={{padding:'0.8rem 1.1rem 0'}}><Link to="/moderacao" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><ShieldCheck size={16}/> Painel de moderação</Link></div>)}
+      {isModeratorOrAdmin&&(<div style={{padding:'0.8rem 1.1rem 0',display:'grid',gap:'0.5rem'}}><Link to="/moderacao" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><ShieldCheck size={16}/> Painel de moderação</Link>{isAdmin&&<Link to="/admin/especies" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><ShieldCheck size={16}/> Gestão de espécies</Link>}</div>)}
       {tab==='perfil'&&(
         <form onSubmit={saveProfile} className="page">
           <div className="field"><label>Telefone</label><input className="input" value={phone} onChange={(e)=>setPhone(e.target.value)}/></div>

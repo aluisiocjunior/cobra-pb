@@ -1,6 +1,6 @@
 import{useEffect,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{ShieldAlert,MapPinned,BookOpen,ChevronRight}from 'lucide-react'
+import{ShieldAlert,MapPinned,BookOpen,ChevronRight,Compass}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{Species,SightingPublic,Stats}from '../lib/types'
@@ -43,6 +43,9 @@ export default function Home(){
       </div>
       <div className="hero-below">
         <p className="hero-signup">Não tem conta? <Link to="/cadastrar">Cadastre-se gratuitamente</Link></p>
+        <Link to="/explorar" className="hero-secondary-link" style={{marginBottom:'0.9rem'}}>
+          <Compass size={14}/> Explorar catálogo de espécies
+        </Link>
         <Link to="/o-que-fazer" className="hero-secondary-link">
           <ShieldAlert size={14}/> O que fazer ao ver uma cobra?
         </Link>
