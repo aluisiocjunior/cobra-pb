@@ -18,6 +18,7 @@ const MapPage=lazy(()=>import('./pages/MapPage'))
 const RecordDetail=lazy(()=>import('./pages/RecordDetail'))
 const Moderation=lazy(()=>import('./pages/Moderation'))
 const SpeciesManagement=lazy(()=>import('./pages/SpeciesManagement'))
+const Admin=lazy(()=>import('./pages/Admin'))
 export default function App(){
   const{isAuthenticated,loading}=useAuth()
   const location=useLocation()
@@ -51,6 +52,7 @@ export default function App(){
       <Route path="/registrar/:id" element={<ProtectedRoute><RegisterSighting/></ProtectedRoute>}/>
       <Route path="/perfil" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
       <Route path="/moderacao" element={<ProtectedRoute><Moderation/></ProtectedRoute>}/>
+      <Route path="/admin" element={<ProtectedRoute><Admin/></ProtectedRoute>}/>
       <Route path="/admin/especies" element={<ProtectedRoute><SpeciesManagement/></ProtectedRoute>}/>
       <Route path="*" element={<p className="center-note">Página não encontrada.</p>}/>
     </Routes></Suspense></main>

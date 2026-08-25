@@ -19,7 +19,7 @@ export default function Home(){
     let mounted=true
     async function load(){
       const[sr,rr,str]=await Promise.all([
-        supabase.from('species').select('*').eq('active',true).limit(4),
+        supabase.from('species').select('*').eq('active',true).overlaps('occurrence_regions',['Paraíba','Caatinga']).limit(4),
         supabase.from('sightings_public').select('*').order('created_at',{ascending:false}).limit(5),
         supabase.from('stats').select('*').maybeSingle()
       ])
