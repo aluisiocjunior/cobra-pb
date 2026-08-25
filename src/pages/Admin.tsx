@@ -1,15 +1,29 @@
 import{useEffect,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{Species,SightingStatus,Role}from '../lib/types'
-import{STATUS_LABELS}from '../lib/types'
+import{STATUS_LABELS,ANIMAL_CONDITION_LABELS,BEHAVIOR_LABELS,type AnimalCondition,type Behavior}from '../lib/types'
+import SpeciesStamp from '../components/SpeciesStamp'
 import SpeciesManagement from './SpeciesManagement'
 
 const PND:SightingStatus[]=['aguardando_revisao','em_revisao','correcao_solicitada','revisao_especialista']
 
-interface Item{id:string;status:SightingStatus;municipio:string|null;observation_date:string|null;notes:string|null;reported_name:string|null;dont_know_species:boolean;confirmed_species_id:string|null;suggested:{common_name:string}|null}
+interface SightingPhotoRow{id:string;url:string;media_type:'foto'|'video'|'anexo';is_primary:boolean;order_index:number}
+interface Item{
+  id:string;status:SightingStatus
+  municipio:string|null;localidade:string|null;local_especifico:string|null
+  latitude:number|null;longitude:number|null;gps_accuracy_m:number|null
+  observation_date:string|null;observation_time:string|null
+  animal_condition:AnimalCondition|null;behavior:Behavior|null
+  notes:string|null;reported_name:string|null;dont_know_species:boolean
+  confirmed_species_id:string|null;suggested_species_id:string|null
+  suggested:{common_name:string;scientific_name:string;venomous:boolean}|null
+  confirmed:{common_name:string;scientific_name:string;venomous:boolean}|null
+  author:{full_name:string;phone:string|null}|null
+  sighting_photos:SightingPhotoRow[]
+}
 
 function Approvals(){
   const{session,isAdmin}=useAuth()
@@ -21,7 +35,15 @@ function Approvals(){
 
   async function load(){
     setLoading(true)
-    const{data}=await supabase.from('sightings').select('id,status,municipio,observation_date,notes,reported_name,dont_know_species,confirmed_species_id,suggested:species!sightings_species_id_fkey(common_name)').in('status',PND).order('created_at',{ascending:true})
+    const{data}=await supabase.from('sightings').select(`
+      id,status,municipio,localidade,local_especifico,latitude,longitude,gps_accuracy_m,
+      observation_date,observation_time,animal_condition,behavior,
+      notes,reported_name,dont_know_species,confirmed_species_id,suggested_species_id,
+      suggested:species!sightings_species_id_fkey(common_name,scientific_name,venomous),
+      confirmed:species!sightings_confirmed_species_id_fkey(common_name,scientific_name,venomous),
+      author:profiles!sightings_user_id_fkey(full_name,phone),
+      sighting_photos(id,url,media_type,is_primary,order_index)
+    `).in('status',PND).order('created_at',{ascending:true})
     setItems(((data as unknown as Item[])??[]))
     setLoading(false)
   }
@@ -48,30 +70,81 @@ function Approvals(){
   return(<div className="page">
     {loading&&<p className="center-note">Carregando…</p>}
     {!loading&&items.length===0&&<p className="center-note">Nenhum registro pendente. 🎉</p>}
-    <div style={{display:'grid',gap:'0.8rem'}}>
-      {items.map((it)=>(<div className="card" key={it.id}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.5rem'}}>
-          <strong style={{fontSize:'0.95rem'}}>{it.dont_know_species?(it.reported_name||'Não identificada'):it.suggested?.common_name}</strong>
-          <span className="status-tag" style={{background:'var(--amarelo-bg)',color:'var(--amarelo-alerta)'}}>{STATUS_LABELS[it.status]}</span>
-        </div>
-        <div style={{fontSize:'0.78rem',color:'var(--cinza-fraco)',marginBottom:'0.5rem'}}>{it.municipio??'—'} · {it.observation_date?new Date(it.observation_date).toLocaleDateString('pt-BR'):''}</div>
-        {it.notes&&<p style={{fontSize:'0.85rem',margin:'0 0 0.5rem'}}>{it.notes}</p>}
-        <Link to={`/registro/${it.id}`} style={{fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:'0.7rem'}}>Ver registro completo →</Link>
-        {isAdmin&&(<div style={{display:'flex',gap:'0.4rem',marginBottom:'0.7rem'}}>
-          <select className="input" style={{flex:1,fontSize:'0.82rem',padding:'0.5rem 0.6rem'}} value={cc[it.id]??''} onChange={(e)=>setCc((c)=>({...c,[it.id]:e.target.value}))}>
-            <option value="">Confirmar espécie oficial…</option>
-            {species.map((s)=><option key={s.id} value={s.id}>{s.common_name} ({s.venomous?'peçonhenta':'não peçonhenta'})</option>)}
-          </select>
-          <button className="btn btn-secondary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={!cc[it.id]||busyId===it.id} onClick={()=>confSp(it.id)}>Confirmar</button>
-        </div>)}
-        {it.confirmed_species_id&&<p className="hint" style={{color:'var(--verde-seguro)'}}>Espécie já confirmada.</p>}
-        <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-          <button className="btn btn-primary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'aprovado','aprovado')}><Check size={14}/> Aprovar</button>
-          <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>reqCorr(it.id)}><MessageSquareWarning size={14}/> Correção</button>
-          <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'revisao_especialista','revisao_especialista')}><Stethoscope size={14}/> Especialista</button>
-          <button className="btn btn-danger btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'rejeitado','rejeitado')}><X size={14}/> Rejeitar</button>
-        </div>
-      </div>))}
+    <div style={{display:'grid',gap:'0.9rem'}}>
+      {items.map((it)=>{
+        const venomousDisplay=it.confirmed?.venomous??it.suggested?.venomous??null
+        const identificationConfirmed=!!it.confirmed_species_id
+        const photos=[...(it.sighting_photos??[])].sort((a,b)=>(b.is_primary?1:0)-(a.is_primary?1:0)||a.order_index-b.order_index)
+        const localParts=[it.localidade,it.local_especifico].filter(Boolean).join(' · ')
+        const mapsUrl=it.latitude!=null&&it.longitude!=null?`https://www.google.com/maps?q=${it.latitude},${it.longitude}`:null
+        return(<div className="card" key={it.id}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'0.5rem',gap:'0.6rem'}}>
+            <strong style={{fontSize:'0.95rem'}}>{it.dont_know_species?(it.reported_name||'Não identificada'):it.suggested?.common_name}</strong>
+            <span className="status-tag" style={{background:'var(--amarelo-bg)',color:'var(--amarelo-alerta)',flexShrink:0}}>{STATUS_LABELS[it.status]}</span>
+          </div>
+
+          {/* Veredito peçonhenta/não, baseado nas informações disponíveis */}
+          <div style={{marginBottom:'0.7rem'}}><SpeciesStamp venomous={venomousDisplay} confirmed={identificationConfirmed}/></div>
+
+          {/* Espécie sugerida x confirmada */}
+          <div style={{fontSize:'0.82rem',marginBottom:'0.6rem'}}>
+            <div><span style={{color:'var(--cinza-fraco)'}}>Espécie sugerida: </span><strong>{it.dont_know_species?'não informada':`${it.suggested?.common_name??'—'} (${it.suggested?.scientific_name??'—'})`}</strong></div>
+            {it.confirmed&&<div><span style={{color:'var(--cinza-fraco)'}}>Espécie confirmada: </span><strong style={{color:'var(--verde-seguro)'}}>{it.confirmed.common_name} ({it.confirmed.scientific_name})</strong></div>}
+          </div>
+
+          {/* Autor */}
+          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',fontSize:'0.82rem',marginBottom:'0.3rem'}}>
+            <UserIcon size={13} color="var(--cinza-fraco)"/><span><strong>{it.author?.full_name??'—'}</strong>{it.author?.phone&&` · ${it.author.phone}`}</span>
+          </div>
+          {/* Data e hora */}
+          <div style={{display:'flex',alignItems:'center',gap:'0.4rem',fontSize:'0.82rem',marginBottom:'0.3rem'}}>
+            <Clock size={13} color="var(--cinza-fraco)"/><span>{it.observation_date?new Date(it.observation_date).toLocaleDateString('pt-BR'):'—'}{it.observation_time&&` às ${it.observation_time.slice(0,5)}`}</span>
+          </div>
+          {/* Local + geolocalização */}
+          <div style={{display:'flex',alignItems:'flex-start',gap:'0.4rem',fontSize:'0.82rem',marginBottom:'0.5rem'}}>
+            <MapPin size={13} color="var(--cinza-fraco)" style={{marginTop:2,flexShrink:0}}/>
+            <span>
+              {it.municipio??'—'}{localParts&&` · ${localParts}`}
+              {it.latitude!=null&&it.longitude!=null&&(<><br/><span style={{fontFamily:'var(--font-mono)',fontSize:'0.75rem',color:'var(--cinza-fraco)'}}>{it.latitude.toFixed(5)}, {it.longitude.toFixed(5)}{it.gps_accuracy_m?` · ±${Math.round(it.gps_accuracy_m)}m`:''}</span>{mapsUrl&&<> · <a href={mapsUrl} target="_blank" rel="noreferrer" style={{fontWeight:600}}>Ver no mapa <ExternalLink size={10} style={{verticalAlign:'-1px'}}/></a></>}</>)}
+            </span>
+          </div>
+          {(it.animal_condition||it.behavior)&&(
+            <div style={{fontSize:'0.82rem',color:'var(--cinza-fraco)',marginBottom:'0.5rem'}}>
+              {it.animal_condition&&<>Condição: <strong style={{color:'var(--cinza-medio)'}}>{ANIMAL_CONDITION_LABELS[it.animal_condition]}</strong></>}
+              {it.animal_condition&&it.behavior&&' · '}
+              {it.behavior&&<>Comportamento: <strong style={{color:'var(--cinza-medio)'}}>{BEHAVIOR_LABELS[it.behavior]}</strong></>}
+            </div>
+          )}
+
+          {/* Anexos */}
+          {photos.length>0&&(<div style={{marginBottom:'0.6rem'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'0.3rem',fontSize:'0.78rem',color:'var(--cinza-fraco)',marginBottom:'0.4rem'}}><Paperclip size={12}/> {photos.length} anexo(s)</div>
+            <div style={{display:'flex',gap:'0.4rem',overflowX:'auto'}}>
+              {photos.map((p)=>(<a href={p.url} target="_blank" rel="noreferrer" key={p.id} style={{flexShrink:0}}>
+                {p.media_type==='video'?<video src={p.url} style={{width:64,height:64,borderRadius:8,objectFit:'cover',background:'var(--fundo)'}}/>:<img src={p.url} alt="" style={{width:64,height:64,borderRadius:8,objectFit:'cover',background:'var(--fundo)'}}/>}
+              </a>))}
+            </div>
+          </div>)}
+
+          {it.notes&&<p style={{fontSize:'0.85rem',margin:'0 0 0.6rem'}}>{it.notes}</p>}
+          <Link to={`/registro/${it.id}`} style={{fontSize:'0.78rem',fontWeight:700,display:'block',marginBottom:'0.7rem'}}>Ver registro completo →</Link>
+
+          {isAdmin&&(<div style={{display:'flex',gap:'0.4rem',marginBottom:'0.7rem'}}>
+            <select className="input" style={{flex:1,fontSize:'0.82rem',padding:'0.5rem 0.6rem'}} value={cc[it.id]??''} onChange={(e)=>setCc((c)=>({...c,[it.id]:e.target.value}))}>
+              <option value="">Confirmar espécie oficial…</option>
+              {species.map((s)=><option key={s.id} value={s.id}>{s.common_name} ({s.venomous?'peçonhenta':'não peçonhenta'})</option>)}
+            </select>
+            <button className="btn btn-secondary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={!cc[it.id]||busyId===it.id} onClick={()=>confSp(it.id)}>Confirmar</button>
+          </div>)}
+
+          <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
+            <button className="btn btn-primary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'aprovado','aprovado')}><Check size={14}/> Aprovar</button>
+            <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>reqCorr(it.id)}><MessageSquareWarning size={14}/> Correção</button>
+            <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'revisao_especialista','revisao_especialista')}><Stethoscope size={14}/> Especialista</button>
+            <button className="btn btn-danger btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'rejeitado','rejeitado')}><X size={14}/> Rejeitar</button>
+          </div>
+        </div>)
+      })}
     </div>
   </div>)
 }
