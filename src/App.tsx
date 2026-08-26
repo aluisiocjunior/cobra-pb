@@ -1,7 +1,8 @@
 import{Suspense,lazy}from 'react'
 import{Routes,Route,Link,useLocation}from 'react-router-dom'
-import{ShieldAlert}from 'lucide-react'
+import{ShieldAlert,WifiOff}from 'lucide-react'
 import{useAuth}from './context/AuthContext'
+import{useOnlineStatus}from './lib/useOnlineStatus'
 import NavBar from './components/NavBar'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
@@ -22,8 +23,14 @@ const Admin=lazy(()=>import('./pages/Admin'))
 export default function App(){
   const{isAuthenticated,loading}=useAuth()
   const location=useLocation()
+  const isOnline=useOnlineStatus()
   const isLandingScreen=location.pathname==='/'&&!isAuthenticated&&!loading
   return(<div className="app-shell">
+    {!isOnline&&(
+      <div style={{background:'var(--preto)',color:'var(--branco)',fontSize:'0.75rem',fontWeight:600,textAlign:'center',padding:'0.4rem',display:'flex',alignItems:'center',justifyContent:'center',gap:'0.4rem'}}>
+        <WifiOff size={13}/> Você está offline — mostrando dados salvos anteriormente
+      </div>
+    )}
     {!isLandingScreen&&(
       <header className="app-header">
         <Link to="/" className="brand">

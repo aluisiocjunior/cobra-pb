@@ -1,5 +1,6 @@
 import{useEffect,useState}from 'react'
 import{useParams,Link}from 'react-router-dom'
+import{Share2,Check}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{SightingPublic,SightingPhoto}from '../lib/types'
@@ -9,6 +10,15 @@ export default function RecordDetail(){
   const{id}=useParams();const{isModeratorOrAdmin}=useAuth()
   const[record,setRecord]=useState<(SightingPublic&{status?:SightingStatus})|null>(null)
   const[photos,setPhotos]=useState<SightingPhoto[]>([]);const[loading,setLoading]=useState(true);const[notFound,setNotFound]=useState(false)
+  const[shared,setShared]=useState(false)
+  async function share(){
+    const url=window.location.href
+    const title='É uma cobra venenosa?'
+    const text=`Avistamento de ${record?.species_display_name??record?.reported_name??'serpente'} em ${record?.municipio??'Paraíba'}`
+    if(navigator.share){try{await navigator.share({title,text,url});return}catch{return}}
+    await navigator.clipboard.writeText(url)
+    setShared(true);setTimeout(()=>setShared(false),2000)
+  }
   useEffect(()=>{
     if(!id)return;let mounted=true
     async function load(){
@@ -37,7 +47,12 @@ export default function RecordDetail(){
         }
       </div>
       <div className="page">
-        <SpeciesStamp venomous={record.venomous_display} confirmed={record.identification_confirmed}/>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:'0.6rem'}}>
+          <SpeciesStamp venomous={record.venomous_display} confirmed={record.identification_confirmed}/>
+          <button onClick={share} className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'999px',flexShrink:0}}>
+            {shared?<><Check size={14}/> Link copiado</>:<><Share2 size={14}/> Compartilhar</>}
+          </button>
+        </div>
         {record.status&&isModeratorOrAdmin&&<span className="status-tag" style={{marginLeft:'0.5rem',background:'var(--amarelo-bg)',color:'var(--amarelo-alerta)'}}>{STATUS_LABELS[record.status]}</span>}
         <h1 style={{marginTop:'0.5rem'}}>{record.species_display_name??record.reported_name??'Espécie não informada'}</h1>
         {!record.identification_confirmed&&<p style={{fontSize:'0.82rem',color:'var(--cinza-fraco)',margin:'0 0 1rem'}}>Sugestão do usuário — não confirmada oficialmente.</p>}

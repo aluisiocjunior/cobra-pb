@@ -1,6 +1,7 @@
 import{useEffect,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3}from 'lucide-react'
+import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,PieChart,Pie,Cell,LineChart,Line,CartesianGrid}from 'recharts'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{Species,SightingStatus,Role}from '../lib/types'
@@ -190,9 +191,145 @@ function UserManagement(){
   </div>)
 }
 
+interface StatsSighting{status:SightingStatus;municipio:string|null;confirmed_species_id:string|null;observation_date:string|null;created_at:string}
+interface QuickStats{total_sightings:number;total_species:number;total_users:number;municipalities:number}
+const CHART_COLORS=['#E5000F','#1a6b2f','#b45309','#444444','#888888','#1a1a1a']
+const STATUS_ORDER:SightingStatus[]=['aguardando_revisao','em_revisao','correcao_solicitada','revisao_especialista','aprovado','rejeitado']
+
+function StatsPanel(){
+  const[sightings,setSightings]=useState<StatsSighting[]>([])
+  const[speciesNames,setSpeciesNames]=useState<Record<string,string>>({})
+  const[quick,setQuick]=useState<QuickStats|null>(null)
+  const[loading,setLoading]=useState(true)
+
+  useEffect(()=>{
+    async function load(){
+      const[sRes,spRes,statsRes]=await Promise.all([
+        supabase.from('sightings').select('status,municipio,confirmed_species_id,observation_date,created_at'),
+        supabase.from('species').select('id,common_name'),
+        supabase.from('stats').select('*').maybeSingle(),
+      ])
+      setSightings((sRes.data as StatsSighting[])??[])
+      setSpeciesNames(Object.fromEntries(((spRes.data as{id:string;common_name:string}[])??[]).map((s)=>[s.id,s.common_name])))
+      setQuick((statsRes.data as QuickStats)??null)
+      setLoading(false)
+    }
+    load()
+  },[])
+
+  if(loading)return<p className="center-note">Carregando…</p>
+  if(sightings.length===0)return(<div>
+    {quick&&<QuickStatsGrid quick={quick}/>}
+    <p className="center-note">Ainda não há registros para gerar estatísticas de avistamentos.</p>
+  </div>)
+
+  const byStatus=STATUS_ORDER.map((status)=>({status:STATUS_LABELS[status],count:sightings.filter((s)=>s.status===status).length})).filter((d)=>d.count>0)
+
+  const approved=sightings.filter((s)=>s.status==='aprovado')
+  const bySpeciesMap=new Map<string,number>()
+  approved.forEach((s)=>{if(s.confirmed_species_id){const name=speciesNames[s.confirmed_species_id]??'—';bySpeciesMap.set(name,(bySpeciesMap.get(name)??0)+1)}})
+  const bySpecies=[...bySpeciesMap.entries()].map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count).slice(0,8)
+
+  const byMunicipioMap=new Map<string,number>()
+  approved.forEach((s)=>{if(s.municipio)byMunicipioMap.set(s.municipio,(byMunicipioMap.get(s.municipio)??0)+1)})
+  const byMunicipio=[...byMunicipioMap.entries()].map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count).slice(0,8)
+
+  const byMonthMap=new Map<string,number>()
+  approved.forEach((s)=>{const d=s.observation_date??s.created_at;if(!d)return;const key=d.slice(0,7);byMonthMap.set(key,(byMonthMap.get(key)??0)+1)})
+  const byMonth=[...byMonthMap.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([month,count])=>({month,count}))
+
+  const venomousCount=approved.filter((s)=>s.confirmed_species_id).length
+
+  return(<div>
+    {quick&&<QuickStatsGrid quick={quick}/>}
+
+    <h3 style={{fontSize:'0.85rem',color:'var(--cinza-fraco)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.6rem'}}>Registros por status</h3>
+    <div className="card" style={{marginBottom:'1.2rem',padding:'1rem 0.5rem'}}>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={byStatus}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--cinza-linha)"/>
+          <XAxis dataKey="status" tick={{fontSize:10}} interval={0} angle={-20} textAnchor="end" height={60}/>
+          <YAxis allowDecimals={false} tick={{fontSize:11}}/>
+          <Tooltip/>
+          <Bar dataKey="count" fill="var(--vermelho)" radius={[6,6,0,0]}/>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {bySpecies.length>0&&(<>
+      <h3 style={{fontSize:'0.85rem',color:'var(--cinza-fraco)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.6rem'}}>Espécies mais registradas (aprovados)</h3>
+      <div className="card" style={{marginBottom:'1.2rem',padding:'1rem 0.5rem'}}>
+        <ResponsiveContainer width="100%" height={Math.max(180,bySpecies.length*36)}>
+          <BarChart data={bySpecies} layout="vertical" margin={{left:8}}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--cinza-linha)"/>
+            <XAxis type="number" allowDecimals={false} tick={{fontSize:11}}/>
+            <YAxis type="category" dataKey="name" tick={{fontSize:10}} width={140}/>
+            <Tooltip/>
+            <Bar dataKey="count" fill="var(--verde-seguro)" radius={[0,6,6,0]}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </>)}
+
+    {byMunicipio.length>0&&(<>
+      <h3 style={{fontSize:'0.85rem',color:'var(--cinza-fraco)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.6rem'}}>Municípios com mais registros</h3>
+      <div className="card" style={{marginBottom:'1.2rem',padding:'1rem 0.5rem'}}>
+        <ResponsiveContainer width="100%" height={Math.max(180,byMunicipio.length*36)}>
+          <BarChart data={byMunicipio} layout="vertical" margin={{left:8}}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--cinza-linha)"/>
+            <XAxis type="number" allowDecimals={false} tick={{fontSize:11}}/>
+            <YAxis type="category" dataKey="name" tick={{fontSize:10}} width={110}/>
+            <Tooltip/>
+            <Bar dataKey="count" fill="var(--amarelo-alerta)" radius={[0,6,6,0]}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </>)}
+
+    {byMonth.length>1&&(<>
+      <h3 style={{fontSize:'0.85rem',color:'var(--cinza-fraco)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.6rem'}}>Registros aprovados ao longo do tempo</h3>
+      <div className="card" style={{marginBottom:'1.2rem',padding:'1rem 0.5rem'}}>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={byMonth}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--cinza-linha)"/>
+            <XAxis dataKey="month" tick={{fontSize:10}}/>
+            <YAxis allowDecimals={false} tick={{fontSize:11}}/>
+            <Tooltip/>
+            <Line type="monotone" dataKey="count" stroke="var(--vermelho)" strokeWidth={2} dot={{r:3}}/>
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </>)}
+
+    <h3 style={{fontSize:'0.85rem',color:'var(--cinza-fraco)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:'0.6rem'}}>Identificação dos aprovados</h3>
+    <div className="card" style={{display:'flex',alignItems:'center',gap:'1.2rem',padding:'1rem'}}>
+      <ResponsiveContainer width={110} height={110}>
+        <PieChart>
+          <Pie data={[{name:'Identificados',value:venomousCount},{name:'Aguardando',value:approved.length-venomousCount}]} dataKey="value" innerRadius={30} outerRadius={50}>
+            {[0,1].map((i)=><Cell key={i} fill={CHART_COLORS[i]}/>)}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div style={{fontSize:'0.82rem'}}>
+        <div style={{display:'flex',alignItems:'center',gap:'0.4rem',marginBottom:'0.3rem'}}><span style={{width:10,height:10,borderRadius:'50%',background:CHART_COLORS[0],display:'inline-block'}}/> Espécie confirmada: <strong>{venomousCount}</strong></div>
+        <div style={{display:'flex',alignItems:'center',gap:'0.4rem'}}><span style={{width:10,height:10,borderRadius:'50%',background:CHART_COLORS[1],display:'inline-block'}}/> Aguardando identificação: <strong>{approved.length-venomousCount}</strong></div>
+      </div>
+    </div>
+  </div>)
+}
+
+function QuickStatsGrid({quick}:{quick:QuickStats}){
+  return(<div className="stat-grid" style={{margin:'0 0 1.4rem',gridTemplateColumns:'repeat(2,1fr)'}}>
+    <div className="stat-box"><span className="n">{quick.total_sightings}</span><span className="l">registros aprovados</span></div>
+    <div className="stat-box"><span className="n">{quick.total_species}</span><span className="l">espécies ativas</span></div>
+    <div className="stat-box"><span className="n">{quick.municipalities}</span><span className="l">municípios</span></div>
+    <div className="stat-box"><span className="n">{quick.total_users}</span><span className="l">usuários ativos</span></div>
+  </div>)
+}
+
 export default function Admin(){
   const{isModeratorOrAdmin,isAdmin}=useAuth()
-  const[tab,setTab]=useState<'aprovacoes'|'especies'|'usuarios'>('aprovacoes')
+  const[tab,setTab]=useState<'aprovacoes'|'estatisticas'|'especies'|'usuarios'>('aprovacoes')
 
   if(!isModeratorOrAdmin)return<p className="center-note">Esta área é restrita a moderadores e administradores.</p>
 
@@ -202,11 +339,13 @@ export default function Admin(){
     </div>
     <div className="tab-row">
       <button className={tab==='aprovacoes'?'active':''} onClick={()=>setTab('aprovacoes')}>Aprovações</button>
+      {isAdmin&&<button className={tab==='estatisticas'?'active':''} onClick={()=>setTab('estatisticas')}><BarChart3 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Estatísticas</button>}
       {isAdmin&&<button className={tab==='especies'?'active':''} onClick={()=>setTab('especies')}>Espécies</button>}
       {isAdmin&&<button className={tab==='usuarios'?'active':''} onClick={()=>setTab('usuarios')}><Users size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Usuários</button>}
     </div>
     <div className="page">
       {tab==='aprovacoes'&&<Approvals/>}
+      {tab==='estatisticas'&&isAdmin&&<StatsPanel/>}
       {tab==='especies'&&isAdmin&&<SpeciesManagement/>}
       {tab==='usuarios'&&isAdmin&&<UserManagement/>}
     </div>
