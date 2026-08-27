@@ -133,7 +133,11 @@ export default function SpeciesManagement(){
       <div className="field"><label>Descrição</label><textarea className="input" value={editing.description} onChange={(e)=>setEditing({...editing,description:e.target.value})}/></div>
       <div className="field"><label>Características de identificação</label><textarea className="input" value={editing.identification_features} onChange={(e)=>setEditing({...editing,identification_features:e.target.value})}/></div>
       <div className="field"><label>Habitat</label><textarea className="input" value={editing.habitat} onChange={(e)=>setEditing({...editing,habitat:e.target.value})}/></div>
-      <div className="field"><label>Regiões de ocorrência na Paraíba (separadas por vírgula)</label><input className="input" value={editing.occurrence_regions} onChange={(e)=>setEditing({...editing,occurrence_regions:e.target.value})} placeholder="Sertão, Cariri, Litoral"/></div>
+      <div className="field">
+        <label>Regiões de ocorrência (separadas por vírgula) *</label>
+        <input className="input" value={editing.occurrence_regions} onChange={(e)=>setEditing({...editing,occurrence_regions:e.target.value})} placeholder="Paraíba, Caatinga"/>
+        <p className="field hint">Inclua sempre <strong>Paraíba</strong> (e o bioma, ex.: Caatinga, Mata Atlântica). Sem isso, a espécie fica cadastrada mas não aparece no catálogo público nem no formulário de registro.</p>
+      </div>
       <div className="field"><label>Referências (uma por linha)</label><textarea className="input" value={editing.references_list} onChange={(e)=>setEditing({...editing,references_list:e.target.value})} placeholder="Fonte confiável 1&#10;Fonte confiável 2"/></div>
       <div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={editing.active} onChange={(e)=>setEditing({...editing,active:e.target.checked})}/>Espécie ativa (visível no catálogo)</label></div>
       {error&&<p className="error-text">{error}</p>}
@@ -156,6 +160,7 @@ export default function SpeciesManagement(){
               <div style={{fontWeight:700,fontSize:'0.92rem'}}>{s.common_name}{!s.active&&' (inativa)'}</div>
               <div style={{fontSize:'0.78rem',color:'var(--cinza-fraco)',fontStyle:'italic'}}>{s.scientific_name}</div>
               <span className={`selo ${s.venomous?'selo-peconhenta':'selo-nao-peconhenta'}`} style={{fontSize:'0.6rem',marginTop:'0.3rem'}}>{s.venomous?'Peçonhenta':'Não peçonhenta'}</span>
+              {!(s.occurrence_regions??[]).some((r)=>r==='Paraíba'||r==='Caatinga')&&<span className="selo selo-aguardando" style={{fontSize:'0.6rem',marginTop:'0.3rem',marginLeft:'0.3rem'}}>Fora do catálogo público</span>}
             </div>
             <div style={{display:'flex',flexDirection:'column',gap:'0.35rem'}}>
               <button onClick={()=>openEdit(s)} style={{padding:'0.4rem',background:'var(--fundo)',borderRadius:8,border:'none',cursor:'pointer',display:'flex'}}><Pencil size={15} color="var(--cinza-medio)"/></button>

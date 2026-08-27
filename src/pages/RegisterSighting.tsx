@@ -31,7 +31,7 @@ export default function RegisterSighting(){
   const[vt,setVt]=useState('');const[se,setSe]=useState('');const[wc,setWc]=useState('');const[dp,setDp]=useState('')
   const[ac2,setAc2]=useState<AnimalCondition|''>('');const[bh,setBh]=useState<Behavior|''>('')
   const[media,setMedia]=useState<PendingMedia[]>([]);const[notes,setNotes]=useState('');const[sc,setSc]=useState(profile?.phone_public??false)
-  useEffect(()=>{supabase.from('species').select('*').eq('active',true).order('common_name').then(({data})=>setSpecies((data as Species[])??[]))},[])  
+  useEffect(()=>{supabase.from('species').select('*').eq('active',true).overlaps('occurrence_regions',['Paraíba','Caatinga']).order('common_name').then(({data})=>setSpecies((data as Species[])??[]))},[])  
   useEffect(()=>{supabase.from('municipios_pb').select('nome').order('nome').then(({data})=>setMunicipios((data??[]).map((m:{nome:string})=>m.nome)))},[])  
   useEffect(()=>{
     if(!isEdit||!editId||!session)return;let mounted=true

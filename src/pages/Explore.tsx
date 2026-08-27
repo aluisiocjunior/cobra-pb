@@ -19,7 +19,7 @@ export default function Explore() {
     setLoading(true)
     async function load() {
       if (tab === 'catalogo') {
-        const { data } = await supabase.from('species').select('*').eq('active', true).order('common_name')
+        const { data } = await supabase.from('species').select('*').eq('active', true).overlaps('occurrence_regions',['Paraíba','Caatinga']).order('common_name')
         if (mounted) setSpecies((data as Species[]) ?? [])
       } else {
         const { data } = await supabase.from('sightings_public').select('*').order('created_at', { ascending: false }).limit(50)
