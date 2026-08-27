@@ -125,6 +125,7 @@ export interface SightingPublic {
   author_name: string | null
   created_at: string
   view_count: number
+  primary_photo_url: string | null
 }
 
 export interface FirstAidInfo {

@@ -1,5 +1,5 @@
-import{useEffect,useState}from 'react'
-import{Plus,Pencil,X,Check,EyeOff,Eye}from 'lucide-react'
+import{useEffect,useRef,useState}from 'react'
+import{Plus,Pencil,X,Check,EyeOff,Eye,Upload,Loader2}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{Species}from '../lib/types'
@@ -28,7 +28,9 @@ export default function SpeciesManagement(){
   const[loading,setLoading]=useState(true)
   const[editing,setEditing]=useState<FormState|null>(null)
   const[saving,setSaving]=useState(false)
+  const[uploading,setUploading]=useState(false)
   const[error,setError]=useState<string|null>(null)
+  const fileRef=useRef<HTMLInputElement>(null)
 
   async function load(){
     setLoading(true)
@@ -90,6 +92,18 @@ export default function SpeciesManagement(){
     load()
   }
 
+  async function uploadPhoto(file:File){
+    if(!editing)return
+    setUploading(true);setError(null)
+    const ext=file.name.split('.').pop()??'jpg'
+    const path=`${(editing.common_name||'especie').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-')}-${Date.now()}.${ext}`
+    const{error:upErr}=await supabase.storage.from('species-photos').upload(path,file,{contentType:file.type,upsert:false})
+    if(upErr){setError(upErr.message);setUploading(false);return}
+    const{data:pub}=supabase.storage.from('species-photos').getPublicUrl(path)
+    setEditing({...editing,image_url:pub.publicUrl})
+    setUploading(false)
+  }
+
   if(!isAdmin)return<p className="center-note">Esta área é restrita a administradores.</p>
 
   if(editing)return(
@@ -105,7 +119,17 @@ export default function SpeciesManagement(){
         <div className="field"><label>Gênero</label><input className="input" value={editing.genus} onChange={(e)=>setEditing({...editing,genus:e.target.value})}/></div>
       </div>
       <div className="field"><label>Classificação *</label><Chips opts={[['Peçonhenta',true],['Não peçonhenta',false]]} val={editing.venomous} set={(v)=>setEditing({...editing,venomous:v})}/></div>
-      <div className="field"><label>URL da foto principal</label><input className="input" value={editing.image_url} onChange={(e)=>setEditing({...editing,image_url:e.target.value})} placeholder="https://…"/></div>
+      <div className="field">
+        <label>Foto principal</label>
+        {editing.image_url&&(<div style={{width:100,height:100,borderRadius:8,overflow:'hidden',marginBottom:'0.6rem',background:'var(--fundo)'}}><img src={editing.image_url} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>)}
+        <div style={{display:'flex',gap:'0.5rem',marginBottom:'0.5rem'}}>
+          <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={()=>fileRef.current?.click()} disabled={uploading}>
+            {uploading?<><Loader2 size={14} className="spin"/> Enviando…</>:<><Upload size={14}/> Enviar do dispositivo</>}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={(e)=>{const f=e.target.files?.[0];if(f)uploadPhoto(f);e.target.value=''}}/>
+        </div>
+        <input className="input" value={editing.image_url} onChange={(e)=>setEditing({...editing,image_url:e.target.value})} placeholder="…ou cole uma URL (https://)"/>
+      </div>
       <div className="field"><label>Descrição</label><textarea className="input" value={editing.description} onChange={(e)=>setEditing({...editing,description:e.target.value})}/></div>
       <div className="field"><label>Características de identificação</label><textarea className="input" value={editing.identification_features} onChange={(e)=>setEditing({...editing,identification_features:e.target.value})}/></div>
       <div className="field"><label>Habitat</label><textarea className="input" value={editing.habitat} onChange={(e)=>setEditing({...editing,habitat:e.target.value})}/></div>

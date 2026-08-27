@@ -3,14 +3,19 @@ import{Link}from 'react-router-dom'
 import{ShieldAlert,MapPinned,BookOpen,ChevronRight,Compass}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
-import type{Species,SightingPublic,Stats}from '../lib/types'
+import type{SightingPublic,Stats}from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
 
 const HERO_COVER='/images/hero-cover.png'
 
+function formatDateTime(date:string|null,time:string|null){
+  if(!date)return null
+  const d=new Date(date).toLocaleDateString('pt-BR')
+  return time?`${d} · ${time.slice(0,5)}`:d
+}
+
 export default function Home(){
   const{isAuthenticated,loading:authLoading}=useAuth()
-  const[species,setSpecies]=useState<Species[]>([])
   const[recent,setRecent]=useState<SightingPublic[]>([])
   const[stats,setStats]=useState<Stats|null>(null)
   const[loading,setLoading]=useState(true)
@@ -18,13 +23,11 @@ export default function Home(){
     if(!isAuthenticated){setLoading(false);return}
     let mounted=true
     async function load(){
-      const[sr,rr,str]=await Promise.all([
-        supabase.from('species').select('*').eq('active',true).overlaps('occurrence_regions',['Paraíba','Caatinga']).limit(4),
-        supabase.from('sightings_public').select('*').order('created_at',{ascending:false}).limit(5),
+      const[rr,str]=await Promise.all([
+        supabase.from('sightings_public').select('*').order('created_at',{ascending:false}).limit(6),
         supabase.from('stats').select('*').maybeSingle()
       ])
       if(!mounted)return
-      setSpecies((sr.data as Species[])??[])
       setRecent((rr.data as SightingPublic[])??[])
       setStats((str.data as Stats)??null)
       setLoading(false)
@@ -54,6 +57,7 @@ export default function Home(){
   )
 
   /* ── DASHBOARD (autenticado) ── */
+  const featured=recent.slice(0,4)
   return(
     <div style={{paddingBottom:'1rem'}}>
       <div style={{background:'var(--vermelho)',padding:'1.5rem 1.1rem 1.2rem'}}>
@@ -62,9 +66,9 @@ export default function Home(){
       </div>
       {stats&&(
         <div className="stat-grid" style={{padding:'1rem 1.1rem 0',marginBottom:0}}>
-          <div className="stat-box"><span className="n">{stats.total_sightings}</span><span className="l">registros</span></div>
-          <div className="stat-box"><span className="n">{stats.total_species}</span><span className="l">espécies</span></div>
-          <div className="stat-box"><span className="n">{stats.municipalities}</span><span className="l">municípios</span></div>
+          <Link to="/explorar?tab=registros" className="stat-box" style={{textDecoration:'none',display:'block'}}><span className="n">{stats.total_sightings}</span><span className="l">registros</span></Link>
+          <Link to="/explorar" className="stat-box" style={{textDecoration:'none',display:'block'}}><span className="n">{stats.total_species}</span><span className="l">espécies</span></Link>
+          <Link to="/mapa" className="stat-box" style={{textDecoration:'none',display:'block'}}><span className="n">{stats.municipalities}</span><span className="l">municípios</span></Link>
         </div>
       )}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.6rem',padding:'1rem 1.1rem'}}>
@@ -79,21 +83,21 @@ export default function Home(){
       </div>
       <div className="section-title">
         <h2>Espécies em destaque</h2>
-        <Link to="/explorar">ver catálogo <ChevronRight size={12} style={{verticalAlign:'-2px'}}/></Link>
+        <Link to="/explorar?tab=registros">ver todos <ChevronRight size={12} style={{verticalAlign:'-2px'}}/></Link>
       </div>
       {loading?<p className="center-note">Carregando…</p>:(
         <div className="species-grid" style={{marginBottom:'1.4rem'}}>
-          {species.map((s)=>(
-            <Link to={`/explorar/especie/${s.id}`} className="species-card" key={s.id}>
-              <div className="thumb">{s.image_url&&<img src={s.image_url} alt={s.common_name}/>}</div>
+          {featured.map((r)=>(
+            <Link to={`/registro/${r.id}`} className="species-card" key={r.id}>
+              <div className="thumb">{r.primary_photo_url&&<img src={r.primary_photo_url} alt={r.species_display_name??''}/>}</div>
               <div className="body">
-                <div className="common">{s.common_name}</div>
-                <div className="sci">{s.scientific_name}</div>
-                <SpeciesStamp venomous={s.venomous} confirmed size="sm"/>
+                <div className="common">{r.species_display_name??r.reported_name??'Não identificada'}</div>
+                <div className="sci" style={{fontStyle:'normal'}}>{r.municipio??'—'}{formatDateTime(r.observation_date,r.observation_time)&&` · ${formatDateTime(r.observation_date,r.observation_time)}`}</div>
+                <SpeciesStamp venomous={r.venomous_display} confirmed={r.identification_confirmed} size="sm"/>
               </div>
             </Link>
           ))}
-          {species.length===0&&<p className="center-note" style={{gridColumn:'1/-1'}}>Nenhuma espécie cadastrada.</p>}
+          {featured.length===0&&<p className="center-note" style={{gridColumn:'1/-1'}}>Ainda não há registros aprovados.</p>}
         </div>
       )}
       <div className="section-title">
@@ -103,10 +107,10 @@ export default function Home(){
       <div style={{background:'var(--branco)',borderTop:'1px solid var(--cinza-linha)',marginBottom:'1rem'}}>
         {recent.map((r)=>(
           <Link to={`/registro/${r.id}`} className="list-row" key={r.id}>
-            <div className="thumb"/>
+            <div className="thumb">{r.primary_photo_url&&<img src={r.primary_photo_url} alt=""/>}</div>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:'0.9rem',color:'var(--preto)'}}>{r.species_display_name??r.reported_name??'Espécie não informada'}</div>
-              <div style={{fontSize:'0.78rem',color:'var(--cinza-fraco)'}}>{r.municipio??'—'}</div>
+              <div style={{fontSize:'0.78rem',color:'var(--cinza-fraco)'}}>{r.municipio??'—'}{formatDateTime(r.observation_date,r.observation_time)&&` · ${formatDateTime(r.observation_date,r.observation_time)}`}</div>
               <SpeciesStamp venomous={r.venomous_display} confirmed={r.identification_confirmed} size="sm"/>
             </div>
           </Link>

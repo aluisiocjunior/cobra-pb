@@ -25,7 +25,8 @@ function ClusterLayer({sightings}:{sightings:SightingPublic[]}){
       const el=document.createElement('div')
       el.style.fontFamily='var(--font-body)'
       el.style.minWidth='160px'
-      el.innerHTML=`<strong style="font-size:0.9rem">${s.species_display_name??s.reported_name??'Não identificada'}</strong><div style="font-size:0.8rem;color:var(--cinza-medio);margin:0.3rem 0">${s.municipio??''}</div>`
+      const dateLabel=s.observation_date?new Date(s.observation_date).toLocaleDateString('pt-BR'):''
+      el.innerHTML=`<strong style="font-size:0.9rem;display:block">${s.species_display_name??s.reported_name??'Não identificada'}</strong><div style="font-size:0.78rem;color:var(--cinza-fraco);margin-top:0.15rem">${dateLabel}</div><div style="font-size:0.8rem;color:var(--cinza-medio);margin:0.3rem 0">${s.municipio??''}</div>`
       const link=document.createElement('a')
       link.href=`/registro/${s.id}`
       link.style.fontSize='0.78rem'
