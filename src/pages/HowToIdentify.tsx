@@ -13,7 +13,7 @@ const FEATURES = [
 
 export default function HowToIdentify() {
   return (
-    <div>
+    <div className="page">
       <span className="eyebrow">Educação</span>
       <h1>Como identificar uma cobra?</h1>
       <p>Estas características, observadas em conjunto e à distância, ajudam a comparar com as espécies do catálogo.</p>

@@ -14,7 +14,7 @@ const ITEMS = [
 
 export default function WhatToDo() {
   return (
-    <div>
+    <div className="page">
       <span className="eyebrow">Segurança</span>
       <h1>O que fazer ao ver uma cobra?</h1>
       <p>Siga estas orientações para evitar acidentes e proteger tanto você quanto o animal.</p>

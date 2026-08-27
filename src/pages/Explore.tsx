@@ -43,27 +43,31 @@ export default function Explore() {
 
   return (
     <div>
-      <h1>Explorar</h1>
+      <div className="page-header" style={{ paddingBottom: '0.8rem' }}>
+        <h1>Explorar</h1>
+      </div>
 
       <div className="tab-row">
         <button className={tab === 'catalogo' ? 'active' : ''} onClick={() => setParams({ tab: 'catalogo' })}>Catálogo</button>
         <button className={tab === 'registros' ? 'active' : ''} onClick={() => setParams({ tab: 'registros' })}>Registros</button>
       </div>
 
-      <div className="field" style={{ position: 'relative' }}>
-        <Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: 'var(--tinta-fraca)' }} />
-        <input
-          className="input"
-          style={{ paddingLeft: '2.1rem' }}
-          placeholder={tab === 'catalogo' ? 'Buscar espécie…' : 'Buscar por município ou espécie…'}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+      <div style={{ padding: '0.8rem 1.1rem' }}>
+        <div className="field" style={{ position: 'relative', marginBottom: '0.7rem' }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: 13, color: 'var(--cinza-fraco)' }} />
+          <input
+            className="input"
+            style={{ paddingLeft: '2.1rem' }}
+            placeholder={tab === 'catalogo' ? 'Buscar espécie…' : 'Buscar por município ou espécie…'}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
 
-      <Link to="/mapa" className="btn btn-outline btn-sm" style={{ width: 'auto', marginBottom: '1rem' }}>
-        <MapPinned size={14} /> Ver no mapa
-      </Link>
+        <Link to="/mapa" className="btn btn-outline btn-sm btn-auto" style={{ borderRadius: '8px' }}>
+          <MapPinned size={14} /> Ver no mapa
+        </Link>
+      </div>
 
       {loading && <p className="center-note">Carregando…</p>}
 
@@ -84,15 +88,15 @@ export default function Explore() {
       )}
 
       {!loading && tab === 'registros' && (
-        <div>
+        <div style={{ background: 'var(--branco)', borderTop: '1px solid var(--cinza-linha)' }}>
           {filteredSightings.map((r) => (
             <Link to={`/registro/${r.id}`} className="list-row" key={r.id}>
-              <div className="thumb" />
+              <div className="thumb">{r.primary_photo_url && <img src={r.primary_photo_url} alt="" />}</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
                   {r.species_display_name ?? r.reported_name ?? 'Espécie não informada'}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--tinta-fraca)' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--cinza-fraco)' }}>
                   {r.municipio ?? '—'} · {r.observation_date ? new Date(r.observation_date).toLocaleDateString('pt-BR') : ''}
                 </div>
                 <SpeciesStamp venomous={r.venomous_display} confirmed={r.identification_confirmed} size="sm" />

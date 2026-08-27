@@ -31,7 +31,7 @@ export default function FirstAid() {
   }, [])
 
   return (
-    <div>
+    <div className="page">
       <span className="eyebrow">Emergência</span>
       <h1>Primeiros socorros</h1>
       <p>Orientações objetivas para acidentes com serpentes na Paraíba.</p>
