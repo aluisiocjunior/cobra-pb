@@ -15,12 +15,19 @@ export default function Profile(){
   const[phone,setPhone]=useState('');const[city,setCity]=useState('');const[state,setState]=useState('PB');const[notifyEnabled,setNotifyEnabled]=useState(true);const[phonePublic,setPhonePublic]=useState(false);const[saving,setSaving]=useState(false);const[saved,setSaved]=useState(false)
   const[sightings,setSightings]=useState<MS[]>([]);const[ls,setLs]=useState(true)
   const[pushStatus,setPushStatus]=useState<PushStatus>('not-subscribed');const[pushBusy,setPushBusy]=useState(false);const[pushError,setPushError]=useState<string|null>(null)
+  const[testSent,setTestSent]=useState<'idle'|'sending'|'ok'|'error'>('idle');const[testMsg,setTestMsg]=useState<string|null>(null)
   useEffect(()=>{getPushStatus().then(setPushStatus)},[])
   async function togglePush(){
     if(!session)return;setPushBusy(true);setPushError(null)
     if(pushStatus==='subscribed'){await unsubscribeFromPush();setPushStatus('not-subscribed')}
     else{const r=await subscribeToPush(session.user.id);if(r.ok)setPushStatus('subscribed');else setPushError(r.error??'Não foi possível ativar as notificações.')}
     setPushBusy(false)
+  }
+  async function sendTestPush(){
+    setTestSent('sending');setTestMsg(null)
+    const{data,error}=await supabase.functions.invoke('send-test-push')
+    if(error||!data?.ok){setTestSent('error');setTestMsg(data?.error??error?.message??'Falha ao enviar.');return}
+    setTestSent('ok');setTestMsg(`Enviada para ${data.delivered} dispositivo(s).`)
   }
   useEffect(()=>{if(profile){setPhone(profile.phone??'');setCity(profile.city??'');setState(profile.state??'PB');setNotifyEnabled(profile.notify_enabled);setPhonePublic(profile.phone_public)}},[profile])
   useEffect(()=>{
@@ -57,6 +64,12 @@ export default function Profile(){
             </button>
             {pushStatus==='unsupported'&&<p className="field hint">Seu navegador não suporta notificações push.</p>}
             {pushStatus==='denied'&&<p className="field hint">Notificações bloqueadas nas configurações do navegador.</p>}
+            {pushStatus==='subscribed'&&(<div style={{marginTop:'0.5rem'}}>
+              <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={sendTestPush} disabled={testSent==='sending'}>
+                {testSent==='sending'?'Enviando…':'Enviar notificação de teste'}
+              </button>
+              {testMsg&&<p className="field hint" style={{color:testSent==='ok'?'var(--verde-seguro)':'var(--vermelho)'}}>{testMsg}</p>}
+            </div>)}
             {pushError&&<p className="error-text">{pushError}</p>}
           </div>
           <div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={phonePublic} onChange={(e)=>setPhonePublic(e.target.checked)}/>Permitir que outros vejam meu telefone</label></div>

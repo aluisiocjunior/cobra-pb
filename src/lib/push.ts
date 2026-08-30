@@ -37,7 +37,10 @@ export async function subscribeToPush(userId: string): Promise<{ ok: boolean; er
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
     })
   }
-  const { error } = await supabase.from('push_tokens').insert({ user_id: userId, token: JSON.stringify(sub) })
+  const { error } = await supabase.from('push_tokens').upsert(
+    { user_id: userId, token: JSON.stringify(sub) },
+    { onConflict: 'user_id,token', ignoreDuplicates: true }
+  )
   if (error) return { ok: false, error: error.message }
   return { ok: true }
 }
