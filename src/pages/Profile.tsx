@@ -76,6 +76,7 @@ export default function Profile(){
           {saved&&<p style={{color:'var(--verde-seguro)',fontWeight:600,fontSize:'0.88rem'}}>Perfil atualizado.</p>}
           <button className="btn btn-primary" type="submit" disabled={saving} style={{borderRadius:'999px'}}>{saving?'Salvando…':'Salvar alterações'}</button>
           <button type="button" className="btn btn-outline" style={{marginTop:'0.6rem',borderRadius:'999px'}} onClick={()=>signOut()}><LogOut size={16}/> Sair da conta</button>
+          <Link to="/privacidade" style={{display:'block',textAlign:'center',marginTop:'0.9rem',fontSize:'0.8rem',color:'var(--cinza-fraco)'}}>Política de Privacidade</Link>
         </form>
       )}
       {tab==='meus-registros'&&(
