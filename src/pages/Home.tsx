@@ -5,6 +5,7 @@ import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import type{SightingPublic,Stats}from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
+import InstallBanner from '../components/InstallBanner'
 
 const HERO_COVER='/images/hero-cover.png'
 
@@ -64,6 +65,7 @@ export default function Home(){
         <p style={{color:'rgba(255,255,255,0.8)',fontSize:'0.78rem',margin:'0 0 0.2rem',fontWeight:600}}>Caderno de campo · Paraíba</p>
         <h1 style={{color:'var(--branco)',margin:0,fontSize:'1.55rem'}}>É uma cobra venenosa?</h1>
       </div>
+      <div style={{paddingTop:'1rem'}}><InstallBanner/></div>
       {stats&&(
         <div className="stat-grid" style={{padding:'1rem 1.1rem 0',marginBottom:0}}>
           <Link to="/explorar?tab=registros" className="stat-box" style={{textDecoration:'none',display:'block'}}><span className="n">{stats.total_sightings}</span><span className="l">registros</span></Link>

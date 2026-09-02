@@ -1,6 +1,6 @@
 import{useEffect,useState}from 'react'
 import{useSearchParams,Link}from 'react-router-dom'
-import{LogOut,Trash2,ShieldCheck,Pencil,Eye,Bell,BellOff}from 'lucide-react'
+import{LogOut,Trash2,ShieldCheck,Pencil,Eye,Bell,BellOff,Share}from 'lucide-react'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
 import{STATUS_LABELS,type SightingStatus}from '../lib/types'
@@ -59,11 +59,24 @@ export default function Profile(){
           </div>
           <div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={notifyEnabled} onChange={(e)=>setNotifyEnabled(e.target.checked)}/>Receber notificações</label></div>
           <div className="field">
-            <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={togglePush} disabled={pushBusy||pushStatus==='unsupported'}>
-              {pushStatus==='subscribed'?<><BellOff size={14}/> Desativar notificações push</>:<><Bell size={14}/> Ativar notificações push neste dispositivo</>}
-            </button>
+            {pushStatus==='ios-needs-install'?(
+              <div className="banner banner-info" style={{marginBottom:'0.5rem'}}>
+                <strong style={{display:'block',marginBottom:'0.5rem'}}><Share size={14} style={{verticalAlign:'-2px',marginRight:'0.3rem'}}/>Instale o app para receber notificações</strong>
+                <p style={{margin:'0 0 0.6rem',fontSize:'0.85rem'}}>No iPhone/iPad, notificações só funcionam quando o app está instalado na Tela de Início — abrir pelo Safari ou Chrome direto não é suficiente. É rápido:</p>
+                <ol style={{margin:0,paddingLeft:'1.2rem',fontSize:'0.85rem',display:'grid',gap:'0.3rem'}}>
+                  <li>Toque no ícone de <strong>Compartilhar</strong> <Share size={12} style={{verticalAlign:'-1px'}}/> na barra do navegador</li>
+                  <li>Escolha <strong>"Adicionar à Tela de Início"</strong></li>
+                  <li>Abra o app pelo ícone que aparecer na tela — não pelo navegador</li>
+                  <li>Volte aqui e toque em "Ativar notificações push"</li>
+                </ol>
+              </div>
+            ):(
+              <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={togglePush} disabled={pushBusy||pushStatus==='unsupported'}>
+                {pushStatus==='subscribed'?<><BellOff size={14}/> Desativar notificações push</>:<><Bell size={14}/> Ativar notificações push neste dispositivo</>}
+              </button>
+            )}
             {pushStatus==='unsupported'&&<p className="field hint">Seu navegador não suporta notificações push.</p>}
-            {pushStatus==='denied'&&<p className="field hint">Notificações bloqueadas nas configurações do navegador.</p>}
+            {pushStatus==='denied'&&<p className="field hint">Notificações bloqueadas nas configurações do navegador. Ative em Ajustes do navegador → Notificações.</p>}
             {pushStatus==='subscribed'&&(<div style={{marginTop:'0.5rem'}}>
               <button type="button" className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={sendTestPush} disabled={testSent==='sending'}>
                 {testSent==='sending'?'Enviando…':'Enviar notificação de teste'}

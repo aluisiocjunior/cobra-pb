@@ -11,10 +11,29 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
-export type PushStatus = 'unsupported' | 'denied' | 'subscribed' | 'not-subscribed'
+export function isIOS(): boolean {
+  const ua = navigator.userAgent
+  const isAppleDevice = /iPad|iPhone|iPod/.test(ua)
+  // iPadOS 13+ reports as "MacIntel" in the user agent, so detect via multi-touch as a fallback.
+  const isIpadOS13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+  return isAppleDevice || isIpadOS13Plus
+}
+
+export function isStandalone(): boolean {
+  const nav = navigator as Navigator & { standalone?: boolean }
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true
+}
+
+export type PushStatus = 'unsupported' | 'ios-needs-install' | 'denied' | 'subscribed' | 'not-subscribed'
 
 export async function getPushStatus(): Promise<PushStatus> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported'
+  const hasPushApi = 'serviceWorker' in navigator && 'PushManager' in window
+  if (!hasPushApi) {
+    // No iOS, o Push API só existe quando o app foi instalado (Adicionar à Tela de Início)
+    // e aberto a partir do ícone — abrir pelo Safari/Chrome normalmente nunca terá suporte.
+    if (isIOS() && !isStandalone()) return 'ios-needs-install'
+    return 'unsupported'
+  }
   if (Notification.permission === 'denied') return 'denied'
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
@@ -23,6 +42,9 @@ export async function getPushStatus(): Promise<PushStatus> {
 
 export async function subscribeToPush(userId: string): Promise<{ ok: boolean; error?: string }> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (isIOS() && !isStandalone()) {
+      return { ok: false, error: 'No iPhone/iPad, primeiro adicione o app à Tela de Início (toque em Compartilhar, depois "Adicionar à Tela de Início") e abra-o a partir do ícone antes de ativar as notificações.' }
+    }
     return { ok: false, error: 'Este navegador não suporta notificações push.' }
   }
   const permission = await Notification.requestPermission()
