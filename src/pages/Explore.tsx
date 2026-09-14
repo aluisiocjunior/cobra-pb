@@ -4,6 +4,7 @@ import { Search, MapPinned } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Species, SightingPublic } from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
+import SightingListItem from '../components/SightingListItem'
 
 export default function Explore() {
   const [params, setParams] = useSearchParams()
@@ -88,21 +89,8 @@ export default function Explore() {
       )}
 
       {!loading && tab === 'registros' && (
-        <div style={{ background: 'var(--branco)', borderTop: '1px solid var(--cinza-linha)' }}>
-          {filteredSightings.map((r) => (
-            <Link to={`/registro/${r.id}`} className="list-row" key={r.id}>
-              <div className="thumb">{r.primary_photo_url && <img src={r.primary_photo_url} alt="" />}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>
-                  {r.species_display_name ?? r.reported_name ?? 'Espécie não informada'}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--cinza-fraco)' }}>
-                  {r.municipio ?? '—'} · {r.observation_date ? new Date(r.observation_date).toLocaleDateString('pt-BR') : ''}
-                </div>
-                <SpeciesStamp venomous={r.venomous_display} confirmed={r.identification_confirmed} size="sm" />
-              </div>
-            </Link>
-          ))}
+        <div className="sighting-list">
+          {filteredSightings.map((r) => <SightingListItem sighting={r} showTime={false} key={r.id} />)}
           {filteredSightings.length === 0 && <p className="center-note">Nenhum registro publicado ainda.</p>}
         </div>
       )}

@@ -17,7 +17,6 @@ const RegisterSighting=lazy(()=>import('./pages/RegisterSighting'))
 const Profile=lazy(()=>import('./pages/Profile'))
 const MapPage=lazy(()=>import('./pages/MapPage'))
 const RecordDetail=lazy(()=>import('./pages/RecordDetail'))
-const Moderation=lazy(()=>import('./pages/Moderation'))
 const SpeciesManagement=lazy(()=>import('./pages/SpeciesManagement'))
 const Admin=lazy(()=>import('./pages/Admin'))
 const PrivacyPolicy=lazy(()=>import('./pages/PrivacyPolicy'))
@@ -59,7 +58,6 @@ export default function App(){
       <Route path="/registrar" element={<ProtectedRoute><RegisterSighting/></ProtectedRoute>}/>
       <Route path="/registrar/:id" element={<ProtectedRoute><RegisterSighting/></ProtectedRoute>}/>
       <Route path="/perfil" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
-      <Route path="/moderacao" element={<ProtectedRoute><Moderation/></ProtectedRoute>}/>
       <Route path="/admin" element={<ProtectedRoute><Admin/></ProtectedRoute>}/>
       <Route path="/admin/especies" element={<ProtectedRoute><SpeciesManagement/></ProtectedRoute>}/>
       <Route path="/privacidade" element={<PrivacyPolicy/>}/>

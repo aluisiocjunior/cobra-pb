@@ -396,3 +396,17 @@ textarea.input { resize: vertical; min-height: 5rem }
 }
 @keyframes spin { to { transform: rotate(360deg) } }
 .spin { animation: spin 0.8s linear infinite }
+.add-tile-busy { cursor: not-allowed; opacity: 0.6 }
+.sighting-list { background: var(--branco); border-top: 1px solid var(--cinza-linha) }
+.list-row-title { font-weight: 700; font-size: 0.9rem; color: var(--preto) }
+.list-row-subtitle { font-size: 0.78rem; color: var(--cinza-fraco); margin-bottom: 0.25rem }
+
+/* ── Home dashboard ── */
+.home-hero-banner { background: var(--vermelho); padding: 1.5rem 1.1rem 1.2rem }
+.home-hero-eyebrow { color: rgba(255,255,255,0.8); font-size: 0.78rem; margin: 0 0 0.2rem; font-weight: 600 }
+.home-hero-title { color: var(--branco); margin: 0; font-size: 1.55rem }
+.home-quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; padding: 1rem 1.1rem }
+.home-quick-action { flex-direction: column; gap: 0.2rem; padding: 0.9rem; border-radius: var(--radius-md) }
+.home-quick-action-secondary { border: 1px solid var(--cinza-linha) }
+.home-quick-action-label { font-size: 0.8rem; font-weight: 700 }
+.stat-box-link { text-decoration: none; display: block }

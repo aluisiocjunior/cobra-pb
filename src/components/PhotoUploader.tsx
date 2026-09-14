@@ -1,5 +1,6 @@
-import { useRef } from 'react'
-import { Camera, ImagePlus, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Camera, ImagePlus, X, Loader2 } from 'lucide-react'
+import { compressImage } from '../lib/imageCompression'
 
 export interface PendingMedia {
   file?: File
@@ -23,15 +24,24 @@ function classify(file: File): 'foto' | 'video' | 'anexo' {
 export default function PhotoUploader({ items, onChange, maxItems = 8 }: Props) {
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
+  const [compressing, setCompressing] = useState(false)
 
-  function addFiles(fileList: FileList | null) {
+  async function addFiles(fileList: FileList | null) {
     if (!fileList) return
-    const next = [...items]
-    for (const file of Array.from(fileList)) {
-      if (next.length >= maxItems) break
-      next.push({ file, previewUrl: URL.createObjectURL(file), mediaType: classify(file) })
+    const incoming = Array.from(fileList).slice(0, Math.max(0, maxItems - items.length))
+    if (incoming.length === 0) return
+    setCompressing(true)
+    try {
+      const processed = await Promise.all(
+        incoming.map(async (file) => {
+          const finalFile = await compressImage(file)
+          return { file: finalFile, previewUrl: URL.createObjectURL(finalFile), mediaType: classify(finalFile) }
+        })
+      )
+      onChange([...items, ...processed])
+    } finally {
+      setCompressing(false)
     }
-    onChange(next)
   }
 
   function removeAt(idx: number) {
@@ -61,13 +71,13 @@ export default function PhotoUploader({ items, onChange, maxItems = 8 }: Props) 
         ))}
         {items.length < maxItems && (
           <>
-            <div className="photo-tile add-tile" onClick={() => cameraRef.current?.click()}>
-              <Camera size={20} />
-              Câmera
+            <div className={`photo-tile add-tile${compressing ? ' add-tile-busy' : ''}`} onClick={() => !compressing && cameraRef.current?.click()}>
+              {compressing ? <Loader2 size={20} className="spin" /> : <Camera size={20} />}
+              {compressing ? 'Otimizando…' : 'Câmera'}
             </div>
-            <div className="photo-tile add-tile" onClick={() => galleryRef.current?.click()}>
-              <ImagePlus size={20} />
-              Galeria
+            <div className={`photo-tile add-tile${compressing ? ' add-tile-busy' : ''}`} onClick={() => !compressing && galleryRef.current?.click()}>
+              {compressing ? <Loader2 size={20} className="spin" /> : <ImagePlus size={20} />}
+              {compressing ? 'Otimizando…' : 'Galeria'}
             </div>
           </>
         )}
@@ -89,7 +99,7 @@ export default function PhotoUploader({ items, onChange, maxItems = 8 }: Props) 
         style={{ display: 'none' }}
         onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
       />
-      <p className="field hint">A primeira imagem da lista será usada como foto principal.</p>
+      <p className="field hint">A primeira imagem da lista será usada como foto principal. Fotos são otimizadas automaticamente antes do envio para economizar dados.</p>
     </div>
   )
 }
