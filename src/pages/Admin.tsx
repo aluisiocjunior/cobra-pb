@@ -1,6 +1,6 @@
 import{useEffect,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2}from 'lucide-react'
 import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,PieChart,Pie,Cell,LineChart,Line,CartesianGrid}from 'recharts'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
@@ -100,11 +100,21 @@ function Approvals(){
       confirmed:species!sightings_confirmed_species_id_fkey(common_name,scientific_name,venomous),
       author:profiles!sightings_user_id_fkey(full_name,phone),
       sighting_photos(id,url,media_type,is_primary,order_index)
-    `).in('status',PND).order('created_at',{ascending:true})
+    `).in('status',PND).is('deleted_at',null).order('created_at',{ascending:true})
     setItems(((data as unknown as Item[])??[]))
     setLoading(false)
   }
   useEffect(()=>{load();supabase.from('species').select('*').eq('active',true).order('common_name').then(({data})=>setSpecies((data as Species[])??[]))},[])
+
+  async function del(id:string){
+    if(!session)return
+    if(!window.confirm('Remover este registro? Ele deixa de aparecer em todas as listagens (perfil do autor, moderação, mapa e catálogo), mas fica preservado no banco.'))return
+    setBusyId(id)
+    await supabase.from('sightings').update({deleted_at:new Date().toISOString()}).eq('id',id)
+    await supabase.from('moderation_actions').insert({sighting_id:id,actor_id:session.user.id,action:'removido'})
+    setItems((p)=>p.filter((i)=>i.id!==id))
+    setBusyId(null)
+  }
 
   async function act(id:string,status:SightingStatus,action:string,message?:string){
     if(!session)return
@@ -151,6 +161,10 @@ function Approvals(){
             <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'revisao_especialista','revisao_especialista')}><Stethoscope size={14}/> Especialista</button>
             <button className="btn btn-danger btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>act(it.id,'rejeitado','rejeitado')}><X size={14}/> Rejeitar</button>
           </div>
+          {isAdmin&&(<div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginTop:'0.4rem',paddingTop:'0.4rem',borderTop:'1px solid var(--cinza-linha)'}}>
+            <Link to={`/registrar/${it.id}`} className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><Pencil size={14}/> Editar</Link>
+            <button className="btn btn-danger btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>del(it.id)}><Trash2 size={14}/> Remover</button>
+          </div>)}
         </>}/>
       ))}
     </div>
@@ -175,7 +189,7 @@ function Approved(){
       confirmed:species!sightings_confirmed_species_id_fkey(common_name,scientific_name,venomous),
       author:profiles!sightings_user_id_fkey(full_name,phone),
       sighting_photos(id,url,media_type,is_primary,order_index)
-    `).eq('status','aprovado').order('created_at',{ascending:false})
+    `).eq('status','aprovado').is('deleted_at',null).order('created_at',{ascending:false})
     setItems(((data as unknown as Item[])??[]))
     setLoading(false)
   }
@@ -188,6 +202,15 @@ function Approved(){
     await supabase.from('moderation_actions').insert({sighting_id:id,actor_id:session.user.id,action:'identificacao_confirmada'})
     setBusyId(null);load()
   }
+  async function del(id:string){
+    if(!session)return
+    if(!window.confirm('Remover este registro? Ele deixa de aparecer em todas as listagens (perfil do autor, moderação, mapa e catálogo), mas fica preservado no banco.'))return
+    setBusyId(id)
+    await supabase.from('sightings').update({deleted_at:new Date().toISOString()}).eq('id',id)
+    await supabase.from('moderation_actions').insert({sighting_id:id,actor_id:session.user.id,action:'removido'})
+    setItems((p)=>p.filter((i)=>i.id!==id))
+    setBusyId(null)
+  }
 
   return(<div className="page">
     {loading&&<p className="center-note">Carregando…</p>}
@@ -195,12 +218,18 @@ function Approved(){
     <div style={{display:'grid',gap:'0.9rem'}}>
       {items.map((it)=>(
         <SightingCard key={it.id} it={it} footer={
-          isAdmin?(<div style={{display:'flex',gap:'0.4rem'}}>
-            <select className="input" style={{flex:1,fontSize:'0.82rem',padding:'0.5rem 0.6rem'}} value={cc[it.id]??it.confirmed_species_id??''} onChange={(e)=>setCc((c)=>({...c,[it.id]:e.target.value}))}>
-              <option value="">{it.confirmed_species_id?'Alterar espécie confirmada…':'Confirmar espécie oficial…'}</option>
-              {species.map((s)=><option key={s.id} value={s.id}>{s.common_name} ({s.venomous?'peçonhenta':'não peçonhenta'})</option>)}
-            </select>
-            <button className="btn btn-secondary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={!cc[it.id]||cc[it.id]===it.confirmed_species_id||busyId===it.id} onClick={()=>confSp(it.id)}>Salvar</button>
+          isAdmin?(<div>
+            <div style={{display:'flex',gap:'0.4rem'}}>
+              <select className="input" style={{flex:1,fontSize:'0.82rem',padding:'0.5rem 0.6rem'}} value={cc[it.id]??it.confirmed_species_id??''} onChange={(e)=>setCc((c)=>({...c,[it.id]:e.target.value}))}>
+                <option value="">{it.confirmed_species_id?'Alterar espécie confirmada…':'Confirmar espécie oficial…'}</option>
+                {species.map((s)=><option key={s.id} value={s.id}>{s.common_name} ({s.venomous?'peçonhenta':'não peçonhenta'})</option>)}
+              </select>
+              <button className="btn btn-secondary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={!cc[it.id]||cc[it.id]===it.confirmed_species_id||busyId===it.id} onClick={()=>confSp(it.id)}>Salvar</button>
+            </div>
+            <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',marginTop:'0.5rem',paddingTop:'0.4rem',borderTop:'1px solid var(--cinza-linha)'}}>
+              <Link to={`/registrar/${it.id}`} className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><Pencil size={14}/> Editar</Link>
+              <button className="btn btn-danger btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>del(it.id)}><Trash2 size={14}/> Remover</button>
+            </div>
           </div>):null
         }/>
       ))}
@@ -263,7 +292,7 @@ function StatsPanel({onNavigate}:{onNavigate:(tab:'aprovados'|'especies'|'usuari
   useEffect(()=>{
     async function load(){
       const[sRes,spRes,statsRes]=await Promise.all([
-        supabase.from('sightings').select('status,municipio,confirmed_species_id,observation_date,created_at'),
+        supabase.from('sightings').select('status,municipio,confirmed_species_id,observation_date,created_at').is('deleted_at',null),
         supabase.from('species').select('id,common_name'),
         supabase.from('stats').select('*').maybeSingle(),
       ])

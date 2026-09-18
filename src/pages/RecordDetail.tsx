@@ -25,7 +25,7 @@ export default function RecordDetail(){
       const pub=await supabase.from('sightings_public').select('*').eq('id',id).maybeSingle()
       if(pub.data){if(!mounted)return;setRecord(pub.data as SightingPublic)}
       else{
-        const own=await supabase.from('sightings').select('*,suggested:species!sightings_species_id_fkey(common_name,venomous),confirmed:species!sightings_confirmed_species_id_fkey(common_name,venomous)').eq('id',id).maybeSingle()
+        const own=await supabase.from('sightings').select('*,suggested:species!sightings_species_id_fkey(common_name,venomous),confirmed:species!sightings_confirmed_species_id_fkey(common_name,venomous)').eq('id',id).is('deleted_at',null).maybeSingle()
         if(!mounted)return
         if(!own.data){setNotFound(true);setLoading(false);return}
         const d=own.data as unknown as Record<string,unknown>&{suggested:{common_name:string;venomous:boolean}|null;confirmed:{common_name:string;venomous:boolean}|null}

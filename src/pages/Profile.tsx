@@ -32,7 +32,7 @@ export default function Profile(){
   useEffect(()=>{if(profile){setPhone(profile.phone??'');setCity(profile.city??'');setState(profile.state??'PB');setNotifyEnabled(profile.notify_enabled);setPhonePublic(profile.phone_public)}},[profile])
   useEffect(()=>{
     if(tab!=='meus-registros'||!session)return;setLs(true)
-    supabase.from('sightings').select('id,status,municipio,observation_date,created_at,suggested:species!sightings_species_id_fkey(common_name),confirmed:species!sightings_confirmed_species_id_fkey(common_name),sighting_photos(url,is_primary,order_index)').eq('user_id',session.user.id).order('created_at',{ascending:false}).then(({data})=>{
+    supabase.from('sightings').select('id,status,municipio,observation_date,created_at,suggested:species!sightings_species_id_fkey(common_name),confirmed:species!sightings_confirmed_species_id_fkey(common_name),sighting_photos(url,is_primary,order_index)').eq('user_id',session.user.id).is('deleted_at',null).order('created_at',{ascending:false}).then(({data})=>{
       const rows=((data as unknown as (MS&{sighting_photos:{url:string;is_primary:boolean;order_index:number}[]})[])?? []).map((r)=>{const ps=[...(r.sighting_photos??[])].sort((a,b)=>(b.is_primary?1:0)-(a.is_primary?1:0)||a.order_index-b.order_index);return{...r,photo:ps[0]?.url??null}})
       setSightings(rows);setLs(false)
     })

@@ -21,8 +21,10 @@ const td=()=>new Date().toISOString().slice(0,10)
 const tn=()=>new Date().toTimeString().slice(0,5)
 const sl=(n:string)=>n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9.]+/g,'-').toLowerCase()
 export default function RegisterSighting(){
-  const{session,profile}=useAuth();const navigate=useNavigate();const{id:editId}=useParams<{id:string}>();const isEdit=!!editId
+  const{session,profile,isAdmin}=useAuth();const navigate=useNavigate();const{id:editId}=useParams<{id:string}>();const isEdit=!!editId
   const[step,setStep]=useState(0);const[species,setSpecies]=useState<Species[]>([]);const[municipios,setMunicipios]=useState<string[]>([]);const[submitting,setSubmitting]=useState(false);const[submitError,setSubmitError]=useState<string|null>(null);const[done,setDone]=useState(false);const[loadingRecord,setLoadingRecord]=useState(isEdit);const[loadError,setLoadError]=useState<string|null>(null)
+  const[ownerId,setOwnerId]=useState<string|null>(null)
+  const editingOthers=isEdit&&isAdmin&&!!ownerId&&!!session&&ownerId!==session.user.id
   const iP=useRef<Record<string,string>>({});const iI=useRef<Set<string>>(new Set())
   const[ssId,setSsId]=useState('');const[dk,setDk]=useState(false);const[ft,setFt]=useState('')
   const[mun,setMun]=useState('');const[loc,setLoc]=useState('');const[le,setLe]=useState('');const[lt,setLt]=useState('')
@@ -39,8 +41,9 @@ export default function RegisterSighting(){
       const{data:rec,error}=await supabase.from('sightings').select('*').eq('id',editId).maybeSingle()
       if(!mounted)return
       if(error||!rec){setLoadError('Registro não encontrado.');setLoadingRecord(false);return}
-      if(rec.user_id!==session!.user.id){setLoadError('Você só pode editar seus próprios registros.');setLoadingRecord(false);return}
-      if(!ED.includes(rec.status)){setLoadError(`Este registro está em "${STATUS_LABELS[rec.status as SightingStatus]}" e não pode ser editado.`);setLoadingRecord(false);return}
+      if(rec.user_id!==session!.user.id&&!isAdmin){setLoadError('Você só pode editar seus próprios registros.');setLoadingRecord(false);return}
+      if(!isAdmin&&!ED.includes(rec.status)){setLoadError(`Este registro está em "${STATUS_LABELS[rec.status as SightingStatus]}" e não pode ser editado.`);setLoadingRecord(false);return}
+      setOwnerId(rec.user_id)
       setSsId(rec.suggested_species_id??'');setDk(rec.dont_know_species??false);setFt(rec.dont_know_species?(rec.reported_name??''):'')
       setMun(rec.municipio??'');setLoc(rec.localidade??'');setLe(rec.local_especifico??'');setLt(rec.location_type??'')
       setLat(rec.latitude);setLng(rec.longitude);setAcc(rec.gps_accuracy_m)
@@ -56,7 +59,7 @@ export default function RegisterSighting(){
       setMedia(em);setLoadingRecord(false)
     }
     lfe();return()=>{mounted=false}
-  },[isEdit,editId,session])
+  },[isEdit,editId,session,isAdmin])
   const sv=(()=>{switch(step){case 0:return dk||!!ssId;case 1:return mun.trim().length>0&&lat!=null&&lng!=null;case 2:return!!od;default:return true}})()
   async function submit(){
     if(!session)return;setSubmitting(true);setSubmitError(null)
@@ -67,6 +70,7 @@ export default function RegisterSighting(){
       if(isEdit&&editId){
         const{error}=await supabase.from('sightings').update(pl).eq('id',editId)
         if(error)throw error;sid=editId
+        if(editingOthers)await supabase.from('moderation_actions').insert({sighting_id:editId,actor_id:session.user.id,action:'edicao'})
         const cIds=new Set(media.filter((m)=>m.existingId).map((m)=>m.existingId as string))
         const rIds=[...iI.current].filter((r)=>!cIds.has(r))
         for(const r of rIds){const u=iP.current[r];await supabase.from('sighting_photos').delete().eq('id',r);if(u){const p=xPath(u);if(p)await supabase.storage.from('sighting-photos').remove([p])}}
@@ -89,13 +93,13 @@ export default function RegisterSighting(){
     finally{setSubmitting(false)}
   }
   if(loadingRecord)return <p className="center-note">Carregando…</p>
-  if(loadError)return(<div className="page" style={{textAlign:'center',paddingTop:'2rem'}}><p>{loadError}</p><button className="btn btn-outline btn-auto" style={{borderRadius:'999px'}} onClick={()=>navigate('/perfil?tab=meus-registros')}>Voltar</button></div>)
-  if(done)return(<div className="page" style={{textAlign:'center',paddingTop:'3rem'}}><CheckCircle2 size={52} color="var(--verde-seguro)" style={{margin:'0 auto 1rem'}}/><h1>{isEdit?'Atualizado!':'Enviado!'}</h1><p>{isEdit?'Alterações salvas.':(<>Aguardando <strong>revisão</strong>.</>)}</p><div style={{display:'grid',gap:'0.6rem',maxWidth:280,margin:'1rem auto 0'}}><button className="btn btn-primary" style={{borderRadius:'999px'}} onClick={()=>navigate('/perfil?tab=meus-registros')}>Ver meus registros</button>{!isEdit&&<button className="btn btn-outline" style={{borderRadius:'999px'}} onClick={()=>window.location.reload()}>Registrar outro</button>}</div></div>)
+  if(loadError)return(<div className="page" style={{textAlign:'center',paddingTop:'2rem'}}><p>{loadError}</p><button className="btn btn-outline btn-auto" style={{borderRadius:'999px'}} onClick={()=>navigate(isAdmin?'/admin':'/perfil?tab=meus-registros')}>Voltar</button></div>)
+  if(done)return(<div className="page" style={{textAlign:'center',paddingTop:'3rem'}}><CheckCircle2 size={52} color="var(--verde-seguro)" style={{margin:'0 auto 1rem'}}/><h1>{isEdit?'Atualizado!':'Enviado!'}</h1><p>{isEdit?'Alterações salvas.':(<>Aguardando <strong>revisão</strong>.</>)}</p><div style={{display:'grid',gap:'0.6rem',maxWidth:280,margin:'1rem auto 0'}}><button className="btn btn-primary" style={{borderRadius:'999px'}} onClick={()=>navigate(editingOthers?'/admin':'/perfil?tab=meus-registros')}>{editingOthers?'Voltar para administração':'Ver meus registros'}</button>{!isEdit&&<button className="btn btn-outline" style={{borderRadius:'999px'}} onClick={()=>window.location.reload()}>Registrar outro</button>}</div></div>)
   return(
     <div>
       <div style={{background:'var(--vermelho)',padding:'1.2rem 1.1rem 0.8rem'}}>
         <div className="stepper">{ST.map((_,i)=>(<div key={i} className={`dot ${i<step?'done':i===step?'current':''}`}/>))}</div>
-        <p style={{color:'rgba(255,255,255,0.85)',margin:0,fontSize:'0.78rem',fontWeight:600}}>Etapa {step+1} de {ST.length} · {ST[step]}</p>
+        <p style={{color:'rgba(255,255,255,0.85)',margin:0,fontSize:'0.78rem',fontWeight:600}}>Etapa {step+1} de {ST.length} · {ST[step]}{editingOthers&&' · Editando como administrador'}</p>
       </div>
       <div className="page">
         {step===0&&(<div><div className="field"><label>Espécie sugerida</label><select className="input" value={ssId} disabled={dk} onChange={(e)=>setSsId(e.target.value)}><option value="">Selecione, se souber…</option>{species.map((s)=>(<option key={s.id} value={s.id}>{s.common_name} ({s.scientific_name})</option>))}</select><p className="hint"><CircleHelp size={12} style={{verticalAlign:'-2px'}}/> Sugestão apenas.</p></div><div className="field"><label style={{display:'flex',alignItems:'center',gap:'0.5rem',cursor:'pointer'}}><input type="checkbox" checked={dk} onChange={(e)=>{setDk(e.target.checked);if(e.target.checked)setSsId('')}}/>Não sei identificar</label></div>{dk&&(<div className="field"><label>Descreva o que você viu</label><input className="input" value={ft} onChange={(e)=>setFt(e.target.value)} placeholder="Ex.: cobra marrom com listras"/></div>)}</div>)}
