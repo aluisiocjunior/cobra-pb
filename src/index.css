@@ -104,21 +104,44 @@ img { max-width: 100%; display: block }
   gap: 0.2rem;
   text-decoration: none;
   color: var(--cinza-fraco);
-  font-size: 0.6rem;
+  font-size: 0.64rem;
   font-family: var(--font-body);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.01em;
+  transition: color 0.15s ease;
+}
+.bottom-nav a .nav-icon { width: 23px; height: 23px; transition: transform 0.15s ease }
+.bottom-nav a .nav-icon-pill {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 28px;
+  border-radius: var(--radius-pill);
+  transition: background-color 0.15s ease;
 }
 .bottom-nav a.active { color: var(--vermelho) }
-.bottom-nav a .nav-icon { width: 22px; height: 22px }
-.bottom-nav a.cta-registrar { color: var(--branco) }
+.bottom-nav a.active .nav-icon-pill { background: var(--vermelho-bg) }
+.bottom-nav a.active .nav-icon { transform: scale(1.05) }
+.bottom-nav a.cta-registrar { justify-content: flex-start; padding-top: 2px }
 .bottom-nav a.cta-registrar .nav-icon-wrap {
   background: var(--vermelho);
   border-radius: 50%;
-  width: 36px; height: 36px;
+  width: 60px; height: 60px;
   display: flex; align-items: center; justify-content: center;
-  margin-top: -16px;
-  box-shadow: 0 4px 12px rgba(229,0,15,0.35);
+  margin-top: -34px;
+  border: 4px solid var(--fundo-card);
+  box-shadow: 0 8px 20px rgba(229,0,15,0.45);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.bottom-nav a.cta-registrar .nav-icon { width: 28px; height: 28px }
+.bottom-nav a.cta-registrar:active .nav-icon-wrap,
+.bottom-nav a.cta-registrar.active .nav-icon-wrap {
+  transform: scale(0.96);
+  box-shadow: 0 4px 12px rgba(229,0,15,0.4);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 
 /* ── Cards ── */
