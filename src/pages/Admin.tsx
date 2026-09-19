@@ -1,6 +1,6 @@
-import{useEffect,useState}from 'react'
+import{useEffect,useRef,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2,RotateCcw}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2,RotateCcw,Upload,FileText}from 'lucide-react'
 import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,PieChart,Pie,Cell,LineChart,Line,CartesianGrid}from 'recharts'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
@@ -237,6 +237,70 @@ function Approved(){
   </div>)
 }
 
+const CONTENT_PAGES:{key:string;label:string}[]=[
+  {key:'o_que_fazer',label:'O que fazer ao ver uma cobra?'},
+  {key:'primeiros_socorros',label:'Primeiros socorros'},
+]
+
+function ContentEditor({pageKey,label}:{pageKey:string;label:string}){
+  const{session}=useAuth()
+  const[value,setValue]=useState('')
+  const[updatedAt,setUpdatedAt]=useState<string|null>(null)
+  const[updatedByName,setUpdatedByName]=useState<string|null>(null)
+  const[loading,setLoading]=useState(true)
+  const[saving,setSaving]=useState(false)
+  const[saved,setSaved]=useState(false)
+  const fileRef=useRef<HTMLInputElement>(null)
+
+  async function load(){
+    setLoading(true)
+    const{data}=await supabase.from('page_content').select('content,updated_at,updater:profiles!page_content_updated_by_fkey(full_name)').eq('key',pageKey).maybeSingle()
+    const row=data as unknown as{content:string;updated_at:string;updater:{full_name:string}|null}|null
+    setValue(row?.content??'')
+    setUpdatedAt(row?.updated_at??null)
+    setUpdatedByName(row?.updater?.full_name??null)
+    setLoading(false)
+  }
+  useEffect(()=>{load()},[pageKey])
+
+  async function save(){
+    if(!session)return
+    setSaving(true);setSaved(false)
+    await supabase.from('page_content').upsert({key:pageKey,content:value,updated_by:session.user.id,updated_at:new Date().toISOString()})
+    setSaving(false);setSaved(true)
+    load()
+  }
+
+  function onFile(e:React.ChangeEvent<HTMLInputElement>){
+    const file=e.target.files?.[0];if(!file)return
+    const reader=new FileReader()
+    reader.onload=()=>{setValue(String(reader.result??''));setSaved(false)}
+    reader.readAsText(file,'utf-8')
+    e.target.value=''
+  }
+
+  return(<div className="card" style={{marginBottom:'1.2rem'}}>
+    <strong style={{fontSize:'0.95rem',display:'block',marginBottom:'0.3rem'}}>{label}</strong>
+    {updatedAt&&<p className="hint" style={{marginBottom:'0.6rem'}}>Última atualização: {new Date(updatedAt).toLocaleString('pt-BR')}{updatedByName&&` por ${updatedByName}`}</p>}
+    {loading?<p className="center-note">Carregando…</p>:(<>
+      <textarea className="input" style={{minHeight:220,fontFamily:'inherit',lineHeight:1.5,resize:'vertical',width:'100%'}} value={value} onChange={(e)=>{setValue(e.target.value);setSaved(false)}}/>
+      <div style={{display:'flex',gap:'0.5rem',flexWrap:'wrap',marginTop:'0.6rem'}}>
+        <button className="btn btn-primary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={saving} onClick={save}>{saving?'Salvando…':'Salvar'}</button>
+        <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} onClick={()=>fileRef.current?.click()}><Upload size={14}/> Carregar de arquivo (.txt)</button>
+        <input ref={fileRef} type="file" accept=".txt,text/plain" style={{display:'none'}} onChange={onFile}/>
+      </div>
+      {saved&&<p className="hint" style={{color:'var(--verde-seguro)',marginTop:'0.4rem'}}>Salvo. A página pública já reflete o novo texto.</p>}
+    </>)}
+  </div>)
+}
+
+function ContentManagement(){
+  return(<div>
+    <p className="hint" style={{marginBottom:'1rem'}}><FileText size={13} style={{verticalAlign:'-2px',marginRight:'0.3rem'}}/>Texto simples (sem formatação/HTML) — use linhas em branco para separar parágrafos. O botão "LIGAR PARA O SAMU — 192" continua fixo, fora deste texto.</p>
+    {CONTENT_PAGES.map((p)=><ContentEditor key={p.key} pageKey={p.key} label={p.label}/>)}
+  </div>)
+}
+
 interface UserRow{id:string;full_name:string;city:string|null;role:Role;active:boolean;created_at:string}
 const ROLE_LABELS:Record<Role,string>={usuario:'Usuário',moderador:'Moderador',admin:'Administrador'}
 
@@ -470,7 +534,7 @@ function QuickStatsGrid({quick,onNavigate}:{quick:QuickStats;onNavigate:(tab:'ap
 
 export default function Admin(){
   const{isModeratorOrAdmin,isAdmin}=useAuth()
-  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'removidos'|'estatisticas'|'especies'|'usuarios'>('aprovacoes')
+  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'removidos'|'estatisticas'|'especies'|'conteudo'|'usuarios'>('aprovacoes')
 
   if(!isModeratorOrAdmin)return<p className="center-note">Esta área é restrita a moderadores e administradores.</p>
 
@@ -484,6 +548,7 @@ export default function Admin(){
       {isAdmin&&<button className={tab==='removidos'?'active':''} onClick={()=>setTab('removidos')}><Trash2 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Removidos</button>}
       {isAdmin&&<button className={tab==='estatisticas'?'active':''} onClick={()=>setTab('estatisticas')}><BarChart3 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Estatísticas</button>}
       {isAdmin&&<button className={tab==='especies'?'active':''} onClick={()=>setTab('especies')}>Espécies</button>}
+      {isAdmin&&<button className={tab==='conteudo'?'active':''} onClick={()=>setTab('conteudo')}><FileText size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Conteúdo</button>}
       {isAdmin&&<button className={tab==='usuarios'?'active':''} onClick={()=>setTab('usuarios')}><Users size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Usuários</button>}
     </div>
     <div className="page">
@@ -492,6 +557,7 @@ export default function Admin(){
       {tab==='removidos'&&isAdmin&&<Trash/>}
       {tab==='estatisticas'&&isAdmin&&<StatsPanel onNavigate={setTab}/>}
       {tab==='especies'&&isAdmin&&<SpeciesManagement/>}
+      {tab==='conteudo'&&isAdmin&&<ContentManagement/>}
       {tab==='usuarios'&&isAdmin&&<UserManagement/>}
     </div>
   </div>)

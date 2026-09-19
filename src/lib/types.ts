@@ -136,6 +136,13 @@ export interface FirstAidInfo {
   order_index?: number
 }
 
+export interface PageContent {
+  key: string
+  content: string
+  updated_by: string | null
+  updated_at: string
+}
+
 export interface Stats {
   total_sightings: number
   venomous_sightings: number
