@@ -1,6 +1,6 @@
 import{useEffect,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2,RotateCcw}from 'lucide-react'
 import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,PieChart,Pie,Cell,LineChart,Line,CartesianGrid}from 'recharts'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
@@ -240,6 +240,60 @@ function Approved(){
 interface UserRow{id:string;full_name:string;city:string|null;role:Role;active:boolean;created_at:string}
 const ROLE_LABELS:Record<Role,string>={usuario:'Usuário',moderador:'Moderador',admin:'Administrador'}
 
+function Trash(){
+  const{session}=useAuth()
+  const[items,setItems]=useState<Item[]>([])
+  const[removedBy,setRemovedBy]=useState<Record<string,{name:string;at:string}>>({})
+  const[loading,setLoading]=useState(true)
+  const[busyId,setBusyId]=useState<string|null>(null)
+
+  async function load(){
+    setLoading(true)
+    const{data}=await supabase.from('sightings').select(`
+      id,status,municipio,localidade,local_especifico,latitude,longitude,gps_accuracy_m,
+      observation_date,observation_time,animal_condition,behavior,
+      notes,reported_name,dont_know_species,confirmed_species_id,suggested_species_id,
+      suggested:species!sightings_species_id_fkey(common_name,scientific_name,venomous),
+      confirmed:species!sightings_confirmed_species_id_fkey(common_name,scientific_name,venomous),
+      author:profiles!sightings_user_id_fkey(full_name,phone),
+      sighting_photos(id,url,media_type,is_primary,order_index)
+    `).not('deleted_at','is',null).order('deleted_at',{ascending:false})
+    const list=(data as unknown as Item[])??[]
+    setItems(list)
+    if(list.length>0){
+      const{data:acts}=await supabase.from('moderation_actions').select('sighting_id,created_at,actor:profiles!moderation_actions_actor_id_fkey(full_name)').eq('action','removido').in('sighting_id',list.map((i)=>i.id)).order('created_at',{ascending:false})
+      const map:Record<string,{name:string;at:string}>={}
+      ;((acts as unknown as{sighting_id:string;created_at:string;actor:{full_name:string}|null}[])??[]).forEach((a)=>{if(!map[a.sighting_id])map[a.sighting_id]={name:a.actor?.full_name??'—',at:a.created_at}})
+      setRemovedBy(map)
+    }else setRemovedBy({})
+    setLoading(false)
+  }
+  useEffect(()=>{load()},[])
+
+  async function restore(id:string){
+    if(!session)return
+    setBusyId(id)
+    await supabase.from('sightings').update({deleted_at:null}).eq('id',id)
+    await supabase.from('moderation_actions').insert({sighting_id:id,actor_id:session.user.id,action:'restaurado'})
+    setItems((p)=>p.filter((i)=>i.id!==id))
+    setBusyId(null)
+  }
+
+  return(<div className="page">
+    <p className="hint" style={{marginBottom:'0.8rem'}}>Registros removidos ficam preservados no banco e somem de todas as listagens públicas. Restaurar devolve o registro exatamente ao status em que estava antes de ser removido.</p>
+    {loading&&<p className="center-note">Carregando…</p>}
+    {!loading&&items.length===0&&<p className="center-note">Nenhum registro removido.</p>}
+    <div style={{display:'grid',gap:'0.9rem'}}>
+      {items.map((it)=>(
+        <SightingCard key={it.id} it={it} footer={<>
+          {removedBy[it.id]&&<p className="hint" style={{marginBottom:'0.6rem'}}>Removido por <strong>{removedBy[it.id].name}</strong> em {new Date(removedBy[it.id].at).toLocaleString('pt-BR')}</p>}
+          <button className="btn btn-secondary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===it.id} onClick={()=>restore(it.id)}><RotateCcw size={14}/> Restaurar</button>
+        </>}/>
+      ))}
+    </div>
+  </div>)
+}
+
 function UserManagement(){
   const[users,setUsers]=useState<UserRow[]>([])
   const[loading,setLoading]=useState(true)
@@ -416,7 +470,7 @@ function QuickStatsGrid({quick,onNavigate}:{quick:QuickStats;onNavigate:(tab:'ap
 
 export default function Admin(){
   const{isModeratorOrAdmin,isAdmin}=useAuth()
-  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'estatisticas'|'especies'|'usuarios'>('aprovacoes')
+  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'removidos'|'estatisticas'|'especies'|'usuarios'>('aprovacoes')
 
   if(!isModeratorOrAdmin)return<p className="center-note">Esta área é restrita a moderadores e administradores.</p>
 
@@ -427,6 +481,7 @@ export default function Admin(){
     <div className="tab-row">
       <button className={tab==='aprovacoes'?'active':''} onClick={()=>setTab('aprovacoes')}>Aprovações</button>
       <button className={tab==='aprovados'?'active':''} onClick={()=>setTab('aprovados')}>Aprovados</button>
+      {isAdmin&&<button className={tab==='removidos'?'active':''} onClick={()=>setTab('removidos')}><Trash2 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Removidos</button>}
       {isAdmin&&<button className={tab==='estatisticas'?'active':''} onClick={()=>setTab('estatisticas')}><BarChart3 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Estatísticas</button>}
       {isAdmin&&<button className={tab==='especies'?'active':''} onClick={()=>setTab('especies')}>Espécies</button>}
       {isAdmin&&<button className={tab==='usuarios'?'active':''} onClick={()=>setTab('usuarios')}><Users size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Usuários</button>}
@@ -434,6 +489,7 @@ export default function Admin(){
     <div className="page">
       {tab==='aprovacoes'&&<Approvals/>}
       {tab==='aprovados'&&<Approved/>}
+      {tab==='removidos'&&isAdmin&&<Trash/>}
       {tab==='estatisticas'&&isAdmin&&<StatsPanel onNavigate={setTab}/>}
       {tab==='especies'&&isAdmin&&<SpeciesManagement/>}
       {tab==='usuarios'&&isAdmin&&<UserManagement/>}
