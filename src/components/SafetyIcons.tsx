@@ -92,3 +92,10 @@ export function IconNaoRemedioCaseiro({ size = 40 }: P) { return wrap(size, <Pro
   <path d="M32 46 C21 46 15 35 17 22 C30 22 39 29 39 40 C39 43 35 46 32 46 Z" stroke="var(--cinza-medio)" strokeWidth="2.3" fill="var(--fundo-card)" />
   <path d="M21 24 C27 31 30 37 32 44" stroke="var(--cinza-medio)" strokeWidth="1.4" fill="none" />
 </Prohibited>) }
+
+/* ── Genérico (cards de "Mais informações") ── */
+export function IconInfoAdicional({ size = 40 }: P) { return wrap(size, <>
+  <circle cx="32" cy="32" r="22" stroke="var(--vermelho)" strokeWidth="2.5" fill="var(--vermelho-bg)" />
+  <circle cx="32" cy="21" r="2.6" fill="var(--vermelho)" />
+  <line x1="32" y1="28" x2="32" y2="43" stroke="var(--vermelho)" strokeWidth="3.5" strokeLinecap="round" />
+</>) }

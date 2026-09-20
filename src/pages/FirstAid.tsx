@@ -5,7 +5,7 @@ import type { FirstAidInfo, PageContent } from '../lib/types'
 import {
   IconDorLocal, IconInchaco, IconSangramento, IconVisaoTurva, IconFaltaAr, IconTontura,
   IconAfasteSe, IconLaveMaos, IconAtendimentoMedico, IconFotoDistancia,
-  IconNaoTorniquete, IconNaoCorte, IconNaoSugar, IconNaoRemedioCaseiro,
+  IconNaoTorniquete, IconNaoCorte, IconNaoSugar, IconNaoRemedioCaseiro, IconInfoAdicional,
 } from '../components/SafetyIcons'
 
 const DEFAULT_CONTENT = `Orientações objetivas para acidentes com serpentes na Paraíba.
@@ -83,20 +83,20 @@ export default function FirstAid() {
       </div>
 
       <h2 style={{ fontSize: '0.95rem' }}>O que fazer</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.4rem', marginBottom: '1.1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.5rem', marginBottom: '1.1rem' }}>
         {DO_STEPS.map(({ Icon, label }) => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <Icon size={34} />
-            <p style={{ margin: '0.3rem 0 0', fontSize: '0.66rem', fontWeight: 600, lineHeight: 1.2 }}>{label}</p>
+          <div key={label} className="card" style={{ textAlign: 'center', padding: '0.7rem 0.4rem' }}>
+            <Icon size={38} />
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.25 }}>{label}</p>
           </div>
         ))}
       </div>
       <h2 style={{ fontSize: '0.95rem', color: 'var(--vermelho)' }}>Nunca faça</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0.4rem', marginBottom: '1.3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '0.5rem', marginBottom: '1.3rem' }}>
         {DONT_STEPS.map(({ Icon, label }) => (
-          <div key={label} style={{ textAlign: 'center' }}>
-            <Icon size={34} />
-            <p style={{ margin: '0.3rem 0 0', fontSize: '0.66rem', fontWeight: 600, lineHeight: 1.2 }}>{label}</p>
+          <div key={label} className="card" style={{ textAlign: 'center', padding: '0.7rem 0.4rem' }}>
+            <Icon size={38} />
+            <p style={{ margin: '0.35rem 0 0', fontSize: '0.74rem', fontWeight: 600, lineHeight: 1.25 }}>{label}</p>
           </div>
         ))}
       </div>
@@ -110,9 +110,12 @@ export default function FirstAid() {
           <h2>Mais informações</h2>
           <div style={{ display: 'grid', gap: '0.6rem', marginBottom: '1rem' }}>
             {items.map((it) => (
-              <div className="card" key={it.id}>
-                <h3>{it.title}</h3>
-                <p style={{ margin: 0, fontSize: '0.88rem', whiteSpace: 'pre-line' }}>{it.content}</p>
+              <div className="card" key={it.id} style={{ display: 'flex', gap: '0.7rem', alignItems: 'flex-start' }}>
+                <IconInfoAdicional size={34} />
+                <div>
+                  <h3 style={{ marginTop: 0 }}>{it.title}</h3>
+                  <p style={{ margin: 0, fontSize: '0.88rem', whiteSpace: 'pre-line' }}>{it.content}</p>
+                </div>
               </div>
             ))}
           </div>
