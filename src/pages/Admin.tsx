@@ -1,10 +1,10 @@
 import{useEffect,useRef,useState}from 'react'
 import{Link}from 'react-router-dom'
-import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2,RotateCcw,Upload,FileText}from 'lucide-react'
+import{Check,X,MessageSquareWarning,Stethoscope,ShieldCheck,Users,MapPin,Clock,User as UserIcon,Paperclip,ExternalLink,BarChart3,Pencil,Trash2,RotateCcw,Upload,FileText,Flag}from 'lucide-react'
 import{BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,PieChart,Pie,Cell,LineChart,Line,CartesianGrid}from 'recharts'
 import{supabase}from '../lib/supabase'
 import{useAuth}from '../context/AuthContext'
-import type{Species,SightingStatus,Role}from '../lib/types'
+import type{Species,SightingStatus,Role,Report}from '../lib/types'
 import{STATUS_LABELS,ANIMAL_CONDITION_LABELS,BEHAVIOR_LABELS,type AnimalCondition,type Behavior}from '../lib/types'
 import SpeciesStamp from '../components/SpeciesStamp'
 import SpeciesManagement from './SpeciesManagement'
@@ -233,6 +233,76 @@ function Approved(){
           </div>):null
         }/>
       ))}
+    </div>
+  </div>)
+}
+
+interface ReportRow extends Report{
+  reporter:{full_name:string}|null
+  sighting:{id:string;municipio:string|null;status:SightingStatus;suggested:{common_name:string}|null;confirmed:{common_name:string}|null}|null
+}
+
+function Reports(){
+  const{session}=useAuth()
+  const[items,setItems]=useState<ReportRow[]>([])
+  const[loading,setLoading]=useState(true)
+  const[busyId,setBusyId]=useState<string|null>(null)
+  const[filter,setFilter]=useState<'pendente'|'resolvido'|'ignorado'|'todas'>('pendente')
+
+  async function load(){
+    setLoading(true)
+    const{data}=await supabase.from('reports').select(`
+      id,sighting_id,reporter_id,reason,status,resolved_by,resolved_at,created_at,
+      reporter:profiles!reports_reporter_id_fkey(full_name),
+      sighting:sightings!reports_sighting_id_fkey(id,municipio,status,suggested:species!sightings_species_id_fkey(common_name),confirmed:species!sightings_confirmed_species_id_fkey(common_name))
+    `).order('created_at',{ascending:false})
+    setItems(((data as unknown as ReportRow[])??[]))
+    setLoading(false)
+  }
+  useEffect(()=>{load()},[])
+
+  async function resolve(id:string,status:'resolvido'|'ignorado'){
+    if(!session)return
+    setBusyId(id)
+    await supabase.from('reports').update({status,resolved_by:session.user.id,resolved_at:new Date().toISOString()}).eq('id',id)
+    setBusyId(null);load()
+  }
+
+  const filtered=filter==='todas'?items:items.filter((r)=>r.status===filter)
+  const pendingCount=items.filter((r)=>r.status==='pendente').length
+
+  return(<div className="page">
+    <div className="field" style={{maxWidth:220,marginBottom:'0.9rem'}}>
+      <select className="input" value={filter} onChange={(e)=>setFilter(e.target.value as typeof filter)}>
+        <option value="pendente">Pendentes{pendingCount>0?` (${pendingCount})`:''}</option>
+        <option value="resolvido">Resolvidas</option>
+        <option value="ignorado">Ignoradas</option>
+        <option value="todas">Todas</option>
+      </select>
+    </div>
+    {loading&&<p className="center-note">Carregando…</p>}
+    {!loading&&filtered.length===0&&<p className="center-note">Nenhuma denúncia por aqui.</p>}
+    <div style={{display:'grid',gap:'0.8rem'}}>
+      {filtered.map((r)=>{
+        const speciesName=r.sighting?.confirmed?.common_name??r.sighting?.suggested?.common_name??'Não identificada'
+        return(<div className="card" key={r.id}>
+          <div style={{display:'flex',justifyContent:'space-between',gap:'0.6rem',marginBottom:'0.4rem'}}>
+            <strong style={{fontSize:'0.9rem'}}>{r.reporter?.full_name??'Usuário removido'}</strong>
+            <span className="hint">{new Date(r.created_at).toLocaleString('pt-BR')}</span>
+          </div>
+          <p style={{margin:'0 0 0.5rem',fontSize:'0.9rem'}}>{r.reason}</p>
+          <p className="hint" style={{marginBottom:'0.6rem'}}>Registro: {speciesName}{r.sighting?.municipio?` · ${r.sighting.municipio}`:''}{r.sighting?.status?` · ${STATUS_LABELS[r.sighting.status]}`:' · registro não existe mais'}</p>
+          <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap',alignItems:'center'}}>
+            {r.sighting&&<Link to={`/registro/${r.sighting.id}`} className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}}><ExternalLink size={13}/> Ver registro</Link>}
+            {r.status==='pendente'?(<>
+              <button className="btn btn-primary btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===r.id} onClick={()=>resolve(r.id,'resolvido')}><Check size={14}/> Marcar resolvida</button>
+              <button className="btn btn-outline btn-sm btn-auto" style={{borderRadius:'8px'}} disabled={busyId===r.id} onClick={()=>resolve(r.id,'ignorado')}><X size={14}/> Ignorar</button>
+            </>):(
+              <span className="status-tag" style={{background:r.status==='resolvido'?'var(--verde-seguro-bg)':'var(--cinza-linha)',color:r.status==='resolvido'?'var(--verde-seguro)':'var(--cinza-medio)'}}>{r.status==='resolvido'?'Resolvida':'Ignorada'}</span>
+            )}
+          </div>
+        </div>)
+      })}
     </div>
   </div>)
 }
@@ -534,7 +604,12 @@ function QuickStatsGrid({quick,onNavigate}:{quick:QuickStats;onNavigate:(tab:'ap
 
 export default function Admin(){
   const{isModeratorOrAdmin,isAdmin}=useAuth()
-  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'removidos'|'estatisticas'|'especies'|'conteudo'|'usuarios'>('aprovacoes')
+  const[tab,setTab]=useState<'aprovacoes'|'aprovados'|'removidos'|'denuncias'|'estatisticas'|'especies'|'conteudo'|'usuarios'>('aprovacoes')
+  const[pendingReports,setPendingReports]=useState(0)
+  useEffect(()=>{
+    if(!isAdmin)return
+    supabase.from('reports').select('id',{count:'exact',head:true}).eq('status','pendente').then(({count})=>setPendingReports(count??0))
+  },[isAdmin,tab])
 
   if(!isModeratorOrAdmin)return<p className="center-note">Esta área é restrita a moderadores e administradores.</p>
 
@@ -546,6 +621,7 @@ export default function Admin(){
       <button className={tab==='aprovacoes'?'active':''} onClick={()=>setTab('aprovacoes')}>Aprovações</button>
       <button className={tab==='aprovados'?'active':''} onClick={()=>setTab('aprovados')}>Aprovados</button>
       {isAdmin&&<button className={tab==='removidos'?'active':''} onClick={()=>setTab('removidos')}><Trash2 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Removidos</button>}
+      {isAdmin&&<button className={tab==='denuncias'?'active':''} onClick={()=>setTab('denuncias')}><Flag size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Denúncias{pendingReports>0?` (${pendingReports})`:''}</button>}
       {isAdmin&&<button className={tab==='estatisticas'?'active':''} onClick={()=>setTab('estatisticas')}><BarChart3 size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Estatísticas</button>}
       {isAdmin&&<button className={tab==='especies'?'active':''} onClick={()=>setTab('especies')}>Espécies</button>}
       {isAdmin&&<button className={tab==='conteudo'?'active':''} onClick={()=>setTab('conteudo')}><FileText size={13} style={{verticalAlign:'-2px',marginRight:'0.25rem'}}/>Conteúdo</button>}
@@ -555,6 +631,7 @@ export default function Admin(){
       {tab==='aprovacoes'&&<Approvals/>}
       {tab==='aprovados'&&<Approved/>}
       {tab==='removidos'&&isAdmin&&<Trash/>}
+      {tab==='denuncias'&&isAdmin&&<Reports/>}
       {tab==='estatisticas'&&isAdmin&&<StatsPanel onNavigate={setTab}/>}
       {tab==='especies'&&isAdmin&&<SpeciesManagement/>}
       {tab==='conteudo'&&isAdmin&&<ContentManagement/>}

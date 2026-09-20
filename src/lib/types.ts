@@ -143,6 +143,17 @@ export interface PageContent {
   updated_at: string
 }
 
+export interface Report {
+  id: string
+  sighting_id: string
+  reporter_id: string | null
+  reason: string
+  status: 'pendente' | 'resolvido' | 'ignorado'
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+}
+
 export interface Stats {
   total_sightings: number
   venomous_sightings: number
