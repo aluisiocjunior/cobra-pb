@@ -12,6 +12,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
     "@types/leaflet.markercluster": "^1.5.6",
+    "@vercel/functions": "^3.9.8",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^1.31.0",
